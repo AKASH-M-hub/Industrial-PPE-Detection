@@ -853,9 +853,11 @@
       const candidates = [];
       if (API_BASE) {
         candidates.push(`${API_BASE}/api/v1/${action}`);
+        candidates.push(`${API_BASE}/api/${action}`);
         candidates.push(`${API_BASE}/${action}`);
       }
       candidates.push(`/api/v1/${action}`);
+      candidates.push(`/api/${action}`);
       candidates.push(`/${action}`);
       const hfDirect = "https://akashhhhwqx-ppe-safety-backend.hf.space";
       if (API_BASE !== hfDirect) {

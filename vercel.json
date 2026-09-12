@@ -2,10 +2,12 @@
   "version": 2,
   "framework": null,
   "rewrites": [
-    { "source": "/api/v1/:path*", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/api/v1/:path*" },
-    { "source": "/detect", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/detect" },
-    { "source": "/reason", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/reason" },
-    { "source": "/health", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/health" },
+    { "source": "/api/v1/detect", "destination": "/api/detect" },
+    { "source": "/detect", "destination": "/api/detect" },
+    { "source": "/api/v1/reason", "destination": "/api/reason" },
+    { "source": "/reason", "destination": "/api/reason" },
+    { "source": "/api/v1/health", "destination": "/api/health" },
+    { "source": "/health", "destination": "/api/health" },
     { "source": "/", "destination": "/dashboard.html" },
     { "source": "/memo", "destination": "/docs/submission_memo.html" }
   ],
