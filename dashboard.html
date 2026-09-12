@@ -815,17 +815,18 @@
       return clean;
     }
 
+    const isVercelHost = window.location.hostname.includes("vercel.app") || window.location.hostname.includes("now.sh");
     let savedApiBase = localStorage.getItem("ppe_api_base");
-    if (savedApiBase && (savedApiBase.includes("akashhhhwqx-ppe-safety-backend.hf.space") || savedApiBase.includes("huggingface.co"))) {
+    if (isVercelHost) {
       localStorage.removeItem("ppe_api_base");
       savedApiBase = null;
     }
 
     // Backend API URL: On Vercel, use Vercel's built-in reverse proxy rewrite (eliminates all cross-site / CORS / CSRF blocks)
-    let API_BASE = savedApiBase 
-      ? sanitizeHfUrl(savedApiBase)
-      : (window.location.hostname.includes("vercel.app")
-          ? "" 
+    let API_BASE = isVercelHost
+      ? "" 
+      : (savedApiBase 
+          ? sanitizeHfUrl(savedApiBase)
           : (window.location.origin.includes(":8000") || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
               ? (window.location.origin.includes(":8000") ? window.location.origin : "http://localhost:8000")
               : "https://akashhhhwqx-ppe-safety-backend.hf.space")
@@ -835,9 +836,8 @@
 
     function updateApiDisplay() {
       const label = document.getElementById("backend-label");
-      const dot = document.getElementById("backend-dot");
       if (!label) return;
-      if (!API_BASE) {
+      if (isVercelHost || !API_BASE) {
         label.innerText = "Vercel Proxy (HF)";
         return;
       }
@@ -849,34 +849,64 @@
       }
     }
 
+    function getCandidateEndpoints(action) {
+      const candidates = [];
+      if (API_BASE) {
+        candidates.push(`${API_BASE}/api/v1/${action}`);
+        candidates.push(`${API_BASE}/${action}`);
+      }
+      candidates.push(`/api/v1/${action}`);
+      candidates.push(`/${action}`);
+      const hfDirect = "https://akashhhhwqx-ppe-safety-backend.hf.space";
+      if (API_BASE !== hfDirect) {
+        candidates.push(`${hfDirect}/api/v1/${action}`);
+        candidates.push(`${hfDirect}/${action}`);
+      }
+      return [...new Set(candidates)];
+    }
+
+    async function executeApiCall(action, makeReq) {
+      const candidates = getCandidateEndpoints(action);
+      let lastRes = null;
+      let lastErr = null;
+
+      for (const url of candidates) {
+        try {
+          const req = makeReq(url);
+          const res = await fetch(url, req);
+          if (res.ok) return res;
+          lastRes = res;
+          if ([403, 404, 405, 500, 502, 503, 504].includes(res.status)) {
+            console.warn(`Endpoint ${url} responded ${res.status}, attempting fallback candidate...`);
+            continue;
+          }
+          return res;
+        } catch (err) {
+          console.warn(`Endpoint ${url} failed with network error:`, err);
+          lastErr = err;
+        }
+      }
+
+      if (lastRes) return lastRes;
+      throw lastErr || new Error("All backend endpoints unreachable");
+    }
+
     async function checkBackendHealth() {
       const dot = document.getElementById("backend-dot");
       if (!dot) return;
-      try {
-        let res = await fetch(`${API_BASE}/health`, { method: "GET", signal: AbortSignal.timeout(4000) });
-        if (!res.ok) {
-          res = await fetch(`${API_BASE}/api/v1/health`, { method: "GET", signal: AbortSignal.timeout(4000) });
-        }
-        if (res.ok) {
-          const contentType = res.headers.get("content-type") || "";
-          if (contentType.includes("application/json")) {
-            const data = await res.json();
-            if (data && (data.status === "healthy" || data.status === "ok")) {
-              dot.style.background = "var(--success)";
-              dot.style.boxShadow = "0 0 8px var(--success)";
-              return;
-            }
+      const urls = [...new Set(["/health", "/api/v1/health", `${API_BASE}/health`, "https://akashhhhwqx-ppe-safety-backend.hf.space/health"].filter(Boolean))];
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(3500) });
+          if (res.ok) {
+            dot.style.background = "var(--success)";
+            dot.style.boxShadow = "0 0 8px var(--success)";
+            return;
           }
-          dot.style.background = "var(--warning)";
-          dot.style.boxShadow = "0 0 8px var(--warning)";
-        } else {
-          dot.style.background = "var(--danger)";
-          dot.style.boxShadow = "0 0 8px var(--danger)";
-        }
-      } catch (err) {
-        dot.style.background = "var(--danger)";
-        dot.style.boxShadow = "0 0 8px var(--danger)";
+        } catch (e) {}
       }
+      dot.style.background = "var(--warning)";
+      dot.style.boxShadow = "0 0 8px var(--warning)";
     }
 
     function changeApiBase() {
@@ -961,34 +991,23 @@
       detProgress.style.display = "block";
       const t0 = performance.now();
       try {
-        let res;
-        if (cachedBase64) {
-          res = await fetch(`${API_BASE}/api/v1/detect`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ image: cachedBase64 })
-          });
-          if (res.status === 404 || res.status === 405) {
-            res = await fetch(`${API_BASE}/detect`, {
+        const res = await executeApiCall("detect", (url) => {
+          if (cachedBase64) {
+            return {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ image: cachedBase64 })
-            });
-          }
-        } else {
-          const formData = new FormData();
-          formData.append("file", file);
-          res = await fetch(`${API_BASE}/api/v1/detect`, {
-            method: "POST",
-            body: formData
-          });
-          if (res.status === 404 || res.status === 405) {
-            res = await fetch(`${API_BASE}/detect`, {
+            };
+          } else {
+            const formData = new FormData();
+            formData.append("file", file);
+            return {
               method: "POST",
               body: formData
-            });
+            };
           }
-        }
+        });
+
         const latency = Math.round(performance.now() - t0);
         document.getElementById("latency-chip").innerHTML = `Latency: <strong>${latency} ms</strong>`;
 
@@ -1012,7 +1031,7 @@
       } catch (err) {
         console.error(err);
         answerCard.className = "answer-card ans-guardrail";
-        answerCard.innerHTML = `<div class="ans-tag">⚠️ Detection Request Failed</div><div>Could not reach detector at ${API_BASE}. (${escapeHtml(err.message || 'Server error')})</div>`;
+        answerCard.innerHTML = `<div class="ans-tag">⚠️ Detection Request Failed</div><div>Could not reach detector at ${API_BASE || 'Vercel Proxy'}. (${escapeHtml(err.message || 'Server error')})</div>`;
       } finally {
         detProgress.style.display = "none";
       }
@@ -1089,35 +1108,23 @@
       answerCard.innerHTML = `Synthesizing safety analysis...`;
 
       try {
-        let res;
-        if (cachedBase64) {
-          res = await fetch(`${API_BASE}/api/v1/reason`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ image: cachedBase64, question: q })
-          });
-          if (res.status === 404 || res.status === 405) {
-            res = await fetch(`${API_BASE}/reason`, {
+        const res = await executeApiCall("reason", (url) => {
+          if (cachedBase64) {
+            return {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ image: cachedBase64, question: q })
-            });
-          }
-        } else {
-          const formData = new FormData();
-          formData.append("file", uploadedFile);
-          formData.append("question", q);
-          res = await fetch(`${API_BASE}/api/v1/reason`, {
-            method: "POST",
-            body: formData
-          });
-          if (res.status === 404 || res.status === 405) {
-            res = await fetch(`${API_BASE}/reason`, {
+            };
+          } else {
+            const formData = new FormData();
+            formData.append("file", uploadedFile);
+            formData.append("question", q);
+            return {
               method: "POST",
               body: formData
-            });
+            };
           }
-        }
+        });
 
         if (!res.ok) {
           const errBody = await res.text().catch(() => "");

@@ -4,6 +4,7 @@ import time
 import gradio as gr
 from PIL import Image
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 
 # ZeroGPU Compatibility Layer
 try:
@@ -74,38 +75,16 @@ def configure_app(fastapi_app):
     if not fastapi_app or not hasattr(fastapi_app, "router"):
         return fastapi_app
 
-    # 1. Enable CORS for all origins (so Vercel frontend can call the backend)
-    fastapi_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    logger.info(f"Configuring routes on FastAPI instance: {fastapi_app}")
 
-    # 2. Prevent Gradio 403 on cross-site form/API requests
-    class MaskSecFetchSiteMiddleware:
-        def __init__(self, inner):
-            self.inner = inner
+    # 1. Mount all API routes
+    try:
+        fastapi_app.include_router(api_router, prefix=settings.API_V1_STR)
+        fastapi_app.include_router(api_router)
+    except Exception as r_err:
+        logger.warning(f"Router inclusion notice: {r_err}")
 
-        async def __call__(self, scope, receive, send):
-            if scope.get("type") == "http":
-                headers = []
-                for k, v in scope.get("headers", []):
-                    if k.lower() == b"sec-fetch-site":
-                        headers.append((k, b"same-origin"))
-                    else:
-                        headers.append((k, v))
-                scope["headers"] = headers
-            await self.inner(scope, receive, send)
-
-    fastapi_app.add_middleware(MaskSecFetchSiteMiddleware)
-
-    # 3. Mount all API routes
-    fastapi_app.include_router(api_router, prefix=settings.API_V1_STR)
-    fastapi_app.include_router(api_router)
-
-    # 4. Shift API routes to the FRONT of router.routes so they match before Gradio's catch-all
+    # 2. Shift API routes to the FRONT of router.routes so they match before Gradio's catch-all
     api_routes = [
         r for r in fastapi_app.router.routes 
         if hasattr(r, "path") and (
@@ -115,37 +94,88 @@ def configure_app(fastapi_app):
     ]
     other_routes = [r for r in fastapi_app.router.routes if r not in api_routes]
     fastapi_app.router.routes = api_routes + other_routes
+    logger.info(f"Successfully prioritized {len(api_routes)} API routes at index 0 of router.routes!")
+
+    # 3. Direct ASGI Stack Wrapping (bypasses Gradio 403 CSRF and injects CORS even after startup)
+    try:
+        from starlette.middleware.cors import CORSMiddleware
+
+        stack = getattr(fastapi_app, "middleware_stack", None)
+        if stack is None and hasattr(fastapi_app, "build_middleware_stack"):
+            stack = fastapi_app.build_middleware_stack()
+
+        if stack is not None:
+            cors_wrapped = CORSMiddleware(
+                stack,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+
+            class UnblockCSRFMiddleware:
+                def __init__(self, inner):
+                    self.inner = inner
+
+                async def __call__(self, scope, receive, send):
+                    if scope.get("type") == "http":
+                        headers = []
+                        for k, v in scope.get("headers", []):
+                            if k.lower() == b"sec-fetch-site":
+                                headers.append((b"sec-fetch-site", b"same-origin"))
+                            else:
+                                headers.append((k, v))
+                        scope["headers"] = headers
+                    await self.inner(scope, receive, send)
+
+            fastapi_app.middleware_stack = UnblockCSRFMiddleware(cors_wrapped)
+            logger.info("Wrapped middleware_stack with UnblockCSRFMiddleware & CORSMiddleware successfully!")
+    except Exception as m_err:
+        logger.warning(f"Middleware wrap notice: {m_err}")
+
     return fastapi_app
 
 
 if __name__ == "__main__":
     demo.queue()
 
-    # Pre-configure demo.app
+    # Step 1: Pre-configure on demo.app
     try:
         configure_app(demo.app)
-    except Exception:
-        pass
+        logger.info("Pre-configuration on demo.app complete.")
+    except Exception as pre_err:
+        logger.warning(f"demo.app pre-config notice: {pre_err}")
 
-    # Launch without hardcoding server_port to respect ZeroGPU environment
-    app_instance = None
+    # Step 2: Launch without hardcoding server_port to respect ZeroGPU environment
+    launch_res = None
     try:
         launch_res = demo.launch(prevent_thread_lock=True)
-        if isinstance(launch_res, tuple) and len(launch_res) > 0:
-            app_instance = launch_res[0]
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Standard launch fallback: {e}")
         launch_res = demo.launch(server_name="0.0.0.0", server_port=7860, prevent_thread_lock=True)
-        if isinstance(launch_res, tuple) and len(launch_res) > 0:
-            app_instance = launch_res[0]
 
-    # Post-configure the actual running app instance
-    if app_instance:
+    # Step 3: Find the active FastAPI app on the running server and configure it
+    targets = []
+    if isinstance(launch_res, tuple) and len(launch_res) > 0:
+        targets.append(launch_res[0])
+    if hasattr(demo, "server") and hasattr(demo.server, "app"):
+        targets.append(demo.server.app)
+    if hasattr(demo, "app"):
+        targets.append(demo.app)
+    if hasattr(launch_res, "app"):
+        targets.append(launch_res.app)
+
+    configured_any = False
+    for target in targets:
         try:
-            configure_app(app_instance)
-        except Exception:
-            pass
+            configure_app(target)
+            configured_any = True
+        except Exception as post_err:
+            logger.warning(f"Post-config attempt notice: {post_err}")
 
-    # Keep server alive
+    logger.info(f"Post-launch FastAPI configuration completed: {configured_any}")
+
+    # Step 4: Keep server process alive
     try:
         demo.block_thread()
     except Exception:
