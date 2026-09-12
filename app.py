@@ -87,12 +87,30 @@ try:
             allow_headers=["*"],
         )
 
-        # 2. Add FastAPI routes (both with /api/v1 prefix and root)
+        # 2. Prevent Gradio 403 Cross-site POST form block on API endpoints
+        class MaskSecFetchSiteMiddleware:
+            def __init__(self, app):
+                self.app = app
+
+            async def __call__(self, scope, receive, send):
+                if scope["type"] == "http":
+                    headers = []
+                    for k, v in scope.get("headers", []):
+                        if k.lower() == b"sec-fetch-site":
+                            headers.append((k, b"same-origin"))
+                        else:
+                            headers.append((k, v))
+                    scope["headers"] = headers
+                await self.app(scope, receive, send)
+
+        fastapi_app.add_middleware(MaskSecFetchSiteMiddleware)
+
+        # 3. Add FastAPI routes (both with /api/v1 prefix and root)
         existing_routes = list(fastapi_app.router.routes)
         fastapi_app.include_router(api_router, prefix=settings.API_V1_STR)
         fastapi_app.include_router(api_router)
 
-        # 3. Prioritize API routes over Gradio's catch-all SvelteKit route
+        # 4. Prioritize API routes over Gradio's catch-all SvelteKit route
         new_routes = [r for r in fastapi_app.router.routes if r not in existing_routes]
         fastapi_app.router.routes = new_routes + existing_routes
 

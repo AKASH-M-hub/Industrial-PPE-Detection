@@ -1,5 +1,7 @@
 import os
-from fastapi import APIRouter, File, UploadFile, Form, HTTPException, status, Depends
+import base64
+from typing import Optional
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException, status, Depends, Request
 from loguru import logger
 
 from src.config import settings
@@ -53,25 +55,47 @@ async def health_check(
     tags=["Detection"],
 )
 async def detect_objects(
-    file: UploadFile = File(..., description="Image file (JPG, PNG, WEBP)"),
+    request: Request,
+    file: Optional[UploadFile] = File(None, description="Image file (JPG, PNG, WEBP)"),
     detector: RTDETRDetector = Depends(get_detector),
 ) -> DetectionResponse:
-    """Detect workers, helmets, and safety vests in an uploaded image."""
-    validate_image_file(file)
+    """Detect workers, helmets, and safety vests in an uploaded image (supports multipart or JSON base64)."""
+    content_type = request.headers.get("content-type", "").lower()
+    image_bytes = None
 
-    try:
-        image_bytes = await file.read()
-        if len(image_bytes) == 0:
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            raw_b64 = body.get("image") or body.get("file") or ""
+            if "," in raw_b64:
+                raw_b64 = raw_b64.split(",", 1)[1]
+            image_bytes = base64.b64decode(raw_b64)
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Empty image payload received."
+                detail=f"Invalid JSON base64 image payload: {e}"
             )
-        if len(image_bytes) > MAX_FILE_SIZE:
+    else:
+        if file is None:
             raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="Uploaded image exceeds 15 MB limit."
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No file provided."
             )
+        validate_image_file(file)
+        image_bytes = await file.read()
 
+    if not image_bytes or len(image_bytes) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty image payload received."
+        )
+    if len(image_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Uploaded image exceeds 15 MB limit."
+        )
+
+    try:
         result = detector.predict(image_bytes)
         return result
     except ValueError as val_err:
@@ -98,30 +122,54 @@ async def detect_objects(
     tags=["Reasoning"],
 )
 async def reason_about_image(
-    file: UploadFile = File(..., description="Image file"),
-    question: str = Form(..., description="Question about the image"),
+    request: Request,
+    file: Optional[UploadFile] = File(None, description="Image file"),
+    question: Optional[str] = Form(None, description="Question about the image"),
     detector: RTDETRDetector = Depends(get_detector),
     engine: ReasoningEngine = Depends(get_reasoning_engine),
 ) -> ReasoningResponse:
-    """Answer natural language questions about PPE compliance in an image."""
-    validate_image_file(file)
+    """Answer natural language questions about PPE compliance in an image (supports multipart or JSON base64)."""
+    content_type = request.headers.get("content-type", "").lower()
+    image_bytes = None
+    q_str = question
 
-    if not question or not question.strip():
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            raw_b64 = body.get("image") or body.get("file") or ""
+            if "," in raw_b64:
+                raw_b64 = raw_b64.split(",", 1)[1]
+            image_bytes = base64.b64decode(raw_b64)
+            q_str = body.get("question") or q_str
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid JSON base64 payload: {e}"
+            )
+    else:
+        if file is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No file provided."
+            )
+        validate_image_file(file)
+        image_bytes = await file.read()
+
+    if not q_str or not q_str.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Question string cannot be empty."
         )
 
-    try:
-        image_bytes = await file.read()
-        if len(image_bytes) == 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Empty image payload received."
-            )
+    if not image_bytes or len(image_bytes) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty image payload received."
+        )
 
+    try:
         response = engine.reason(
-            question=question.strip(),
+            question=q_str.strip(),
             image_bytes=image_bytes,
             detector=detector,
         )

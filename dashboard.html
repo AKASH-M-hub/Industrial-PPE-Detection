@@ -868,6 +868,7 @@
 
     let uploadedFile = null;
     let cachedImage = null;
+    let cachedBase64 = null;
 
     const dropzone = document.getElementById("dropzone");
     const fileInput = document.getElementById("file-input");
@@ -909,6 +910,7 @@
       uploadedFile = file;
       const reader = new FileReader();
       reader.onload = (ev) => {
+        cachedBase64 = ev.target.result;
         const img = new Image();
         img.onload = () => {
           cachedImage = img;
@@ -932,20 +934,35 @@
 
     async function callDetect(file) {
       detProgress.style.display = "block";
-      const formData = new FormData();
-      formData.append("file", file);
-
       const t0 = performance.now();
       try {
-        let res = await fetch(`${API_BASE}/api/v1/detect`, {
-          method: "POST",
-          body: formData
-        });
-        if (res.status === 404 || res.status === 405) {
-          res = await fetch(`${API_BASE}/detect`, {
+        let res;
+        if (cachedBase64) {
+          res = await fetch(`${API_BASE}/api/v1/detect`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: cachedBase64 })
+          });
+          if (res.status === 404 || res.status === 405) {
+            res = await fetch(`${API_BASE}/detect`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image: cachedBase64 })
+            });
+          }
+        } else {
+          const formData = new FormData();
+          formData.append("file", file);
+          res = await fetch(`${API_BASE}/api/v1/detect`, {
             method: "POST",
             body: formData
           });
+          if (res.status === 404 || res.status === 405) {
+            res = await fetch(`${API_BASE}/detect`, {
+              method: "POST",
+              body: formData
+            });
+          }
         }
         const latency = Math.round(performance.now() - t0);
         document.getElementById("latency-chip").innerHTML = `Latency: <strong>${latency} ms</strong>`;
@@ -1046,20 +1063,35 @@
       answerCard.className = "answer-card ans-idle";
       answerCard.innerHTML = `Synthesizing safety analysis...`;
 
-      const formData = new FormData();
-      formData.append("file", uploadedFile);
-      formData.append("question", q);
-
       try {
-        let res = await fetch(`${API_BASE}/api/v1/reason`, {
-          method: "POST",
-          body: formData
-        });
-        if (res.status === 404 || res.status === 405) {
-          res = await fetch(`${API_BASE}/reason`, {
+        let res;
+        if (cachedBase64) {
+          res = await fetch(`${API_BASE}/api/v1/reason`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: cachedBase64, question: q })
+          });
+          if (res.status === 404 || res.status === 405) {
+            res = await fetch(`${API_BASE}/reason`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image: cachedBase64, question: q })
+            });
+          }
+        } else {
+          const formData = new FormData();
+          formData.append("file", uploadedFile);
+          formData.append("question", q);
+          res = await fetch(`${API_BASE}/api/v1/reason`, {
             method: "POST",
             body: formData
           });
+          if (res.status === 404 || res.status === 405) {
+            res = await fetch(`${API_BASE}/reason`, {
+              method: "POST",
+              body: formData
+            });
+          }
         }
 
         if (!res.ok) {
@@ -1129,6 +1161,7 @@
     function resetCanvas() {
       uploadedFile = null;
       cachedImage = null;
+      cachedBase64 = null;
       dropzone.style.display = "block";
       canvasStage.style.display = "none";
       document.getElementById("image-res-badge").innerText = "No Image";
