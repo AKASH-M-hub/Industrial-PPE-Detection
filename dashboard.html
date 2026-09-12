@@ -803,8 +803,20 @@
   </div>
 
   <script>
+    function sanitizeHfUrl(url) {
+      if (!url) return "https://akashhhhwqx-ppe-safety-backend.hf.space";
+      let clean = url.trim().replace(/\/+$/, "");
+      const match = clean.match(/huggingface\.co\/spaces\/([^\/]+)\/([^\/]+)/i);
+      if (match) {
+        const user = match[1].toLowerCase().replace(/_/g, "-");
+        const space = match[2].toLowerCase().replace(/_/g, "-");
+        return `https://${user}-${space}.hf.space`;
+      }
+      return clean;
+    }
+
     // Backend API URL: Checks localStorage first, then detects if running locally, else uses deployed HF Space
-    let API_BASE = localStorage.getItem("ppe_api_base") || (
+    let API_BASE = sanitizeHfUrl(localStorage.getItem("ppe_api_base")) || (
       window.location.origin.includes(":8000") || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
         ? (window.location.origin.includes(":8000") ? window.location.origin : "http://localhost:8000")
         : "https://akashhhhwqx-ppe-safety-backend.hf.space"
@@ -856,9 +868,9 @@
 
     function changeApiBase() {
       const current = localStorage.getItem("ppe_api_base") || API_BASE;
-      const next = prompt("Enter your Backend API Base URL (e.g. your Hugging Face Space URL: https://your-username-space-name.hf.space):", current);
+      const next = prompt("Enter your Backend API Base URL (or paste your Hugging Face Space URL):", current);
       if (next !== null && next.trim()) {
-        const clean = next.trim().replace(/\/+$/, "");
+        const clean = sanitizeHfUrl(next);
         localStorage.setItem("ppe_api_base", clean);
         API_BASE = clean;
         updateApiDisplay();
