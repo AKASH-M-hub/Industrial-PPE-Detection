@@ -803,11 +803,11 @@
   </div>
 
   <script>
-    // Backend API URL: Checks localStorage first, then detects if running locally
+    // Backend API URL: Checks localStorage first, then detects if running locally, else uses deployed HF Space
     let API_BASE = localStorage.getItem("ppe_api_base") || (
       window.location.origin.includes(":8000") || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
         ? (window.location.origin.includes(":8000") ? window.location.origin : "http://localhost:8000")
-        : "http://localhost:8000"
+        : "https://akashhhhwqx-ppe-safety-backend.hf.space"
     );
 
     const STORAGE_KEY = "ppe_inspection_device_history_v1";

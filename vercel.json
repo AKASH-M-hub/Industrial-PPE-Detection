@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "framework": null,
   "rewrites": [
     { "source": "/", "destination": "/dashboard.html" },
     { "source": "/memo", "destination": "/docs/submission_memo.html" }
