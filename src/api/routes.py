@@ -139,3 +139,24 @@ async def reason_about_image(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Reasoning layer failure: {str(exc)}"
         )
+
+
+@router.get("/dashboard", tags=["Dashboard"])
+async def serve_dashboard():
+    from fastapi.responses import FileResponse, HTMLResponse
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    dashboard_path = os.path.join(root_dir, "dashboard.html")
+    if os.path.exists(dashboard_path):
+        return FileResponse(dashboard_path)
+    return HTMLResponse("<h3>Dashboard not found. Open dashboard.html directly.</h3>")
+
+
+@router.get("/memo", tags=["Documentation"])
+async def serve_memo():
+    from fastapi.responses import FileResponse, HTMLResponse
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    memo_path = os.path.join(root_dir, "docs", "submission_memo.html")
+    if os.path.exists(memo_path):
+        return FileResponse(memo_path)
+    return HTMLResponse("<h3>Memo not found. Open docs/submission_memo.html directly.</h3>")
+
