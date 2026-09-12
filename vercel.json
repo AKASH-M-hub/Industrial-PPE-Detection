@@ -2,6 +2,10 @@
   "version": 2,
   "framework": null,
   "rewrites": [
+    { "source": "/api/v1/:path*", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/api/v1/:path*" },
+    { "source": "/detect", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/detect" },
+    { "source": "/reason", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/reason" },
+    { "source": "/health", "destination": "https://akashhhhwqx-ppe-safety-backend.hf.space/health" },
     { "source": "/", "destination": "/dashboard.html" },
     { "source": "/memo", "destination": "/docs/submission_memo.html" }
   ],
@@ -9,7 +13,9 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "*" }
       ]
     }
   ]
