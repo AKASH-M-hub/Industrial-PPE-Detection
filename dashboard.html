@@ -828,13 +828,25 @@
       const dot = document.getElementById("backend-dot");
       if (!dot) return;
       try {
-        const res = await fetch(`${API_BASE}/health`, { method: "GET", signal: AbortSignal.timeout(4000) });
+        let res = await fetch(`${API_BASE}/health`, { method: "GET", signal: AbortSignal.timeout(4000) });
+        if (!res.ok) {
+          res = await fetch(`${API_BASE}/api/v1/health`, { method: "GET", signal: AbortSignal.timeout(4000) });
+        }
         if (res.ok) {
-          dot.style.background = "var(--success)";
-          dot.style.boxShadow = "0 0 8px var(--success)";
-        } else {
+          const contentType = res.headers.get("content-type") || "";
+          if (contentType.includes("application/json")) {
+            const data = await res.json();
+            if (data && (data.status === "healthy" || data.status === "ok")) {
+              dot.style.background = "var(--success)";
+              dot.style.boxShadow = "0 0 8px var(--success)";
+              return;
+            }
+          }
           dot.style.background = "var(--warning)";
           dot.style.boxShadow = "0 0 8px var(--warning)";
+        } else {
+          dot.style.background = "var(--danger)";
+          dot.style.boxShadow = "0 0 8px var(--danger)";
         }
       } catch (err) {
         dot.style.background = "var(--danger)";
@@ -925,14 +937,23 @@
 
       const t0 = performance.now();
       try {
-        const res = await fetch(`${API_BASE}/api/v1/detect`, {
+        let res = await fetch(`${API_BASE}/api/v1/detect`, {
           method: "POST",
           body: formData
         });
+        if (res.status === 404 || res.status === 405) {
+          res = await fetch(`${API_BASE}/detect`, {
+            method: "POST",
+            body: formData
+          });
+        }
         const latency = Math.round(performance.now() - t0);
         document.getElementById("latency-chip").innerHTML = `Latency: <strong>${latency} ms</strong>`;
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          throw new Error(`HTTP ${res.status}: ${errText.slice(0, 100) || res.statusText}`);
+        }
         const data = await res.json();
 
         updateStats(data);
@@ -949,7 +970,7 @@
       } catch (err) {
         console.error(err);
         answerCard.className = "answer-card ans-guardrail";
-        answerCard.innerHTML = `<div class="ans-tag">⚠️ Server Communication Error</div><div>Could not reach detector at ${API_BASE}. Ensure server is running.</div>`;
+        answerCard.innerHTML = `<div class="ans-tag">⚠️ Detection Request Failed</div><div>Could not reach detector at ${API_BASE}. (${escapeHtml(err.message || 'Server error')})</div>`;
       } finally {
         detProgress.style.display = "none";
       }
@@ -1030,12 +1051,21 @@
       formData.append("question", q);
 
       try {
-        const res = await fetch(`${API_BASE}/api/v1/reason`, {
+        let res = await fetch(`${API_BASE}/api/v1/reason`, {
           method: "POST",
           body: formData
         });
+        if (res.status === 404 || res.status === 405) {
+          res = await fetch(`${API_BASE}/reason`, {
+            method: "POST",
+            body: formData
+          });
+        }
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => "");
+          throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 100) || res.statusText}`);
+        }
         const data = await res.json();
         renderAnswer(data);
 
@@ -1048,7 +1078,7 @@
         });
       } catch (e) {
         answerCard.className = "answer-card ans-guardrail";
-        answerCard.innerHTML = `<div class="ans-tag">⚠️ Query Failed</div><div>${e.message}</div>`;
+        answerCard.innerHTML = `<div class="ans-tag">⚠️ Query Failed</div><div>${escapeHtml(e.message || 'Error executing reasoning')}</div>`;
       } finally {
         askBtn.disabled = false;
         reasonProgress.style.display = "none";
