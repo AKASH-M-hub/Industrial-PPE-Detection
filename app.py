@@ -1,8 +1,8 @@
 import os
 import io
 import gradio as gr
-import uvicorn
 from PIL import Image
+from fastapi.middleware.cors import CORSMiddleware
 
 # ZeroGPU Compatibility Layer
 try:
@@ -18,7 +18,8 @@ except ImportError:
             return decorator
     spaces = _MockSpaces()
 
-from src.api.main import app
+from src.api.routes import router as api_router
+from src.config import settings
 from src.detector.model import get_detector
 
 
@@ -45,7 +46,7 @@ def predict_ppe_gpu(image):
         return f"Error during inference: {e}"
 
 
-# Build Gradio Interface for ZeroGPU
+# Build Gradio Interface
 with gr.Blocks(title="PPE Safety Vision & Reasoning Console") as demo:
     gr.Markdown(
         """
@@ -66,10 +67,16 @@ with gr.Blocks(title="PPE Safety Vision & Reasoning Console") as demo:
 
     run_btn.click(fn=predict_ppe_gpu, inputs=input_img, outputs=output_result)
 
-
-# Mount Gradio into FastAPI
-app = gr.mount_gradio_app(app, demo, path="/")
+# Mount all FastAPI routes onto Gradio's internal FastAPI app
+demo.app.include_router(api_router, prefix=settings.API_V1_STR)
+demo.app.include_router(api_router)
+demo.app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    demo.launch(server_name="0.0.0.0", server_port=7860)
