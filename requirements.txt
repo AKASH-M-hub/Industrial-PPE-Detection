@@ -1,0 +1,29 @@
+# Core Web & API Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+gradio>=4.40.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+python-multipart>=0.0.12
+
+# Object Detection Engine (RT-DETR)
+ultralytics>=8.3.0
+torch>=2.2.0
+torchvision>=0.17.0
+
+# Image Processing & CV
+pillow>=10.4.0
+opencv-python-headless>=4.10.0
+numpy>=1.26.0
+
+# Part B Minimal Reasoning Layer (NO Agentic Frameworks - Pure SDK)
+groq>=0.11.0
+
+# Logging & Utilities
+loguru>=0.7.2
+python-dotenv>=1.0.1
+requests>=2.32.0
+
+# Testing & Verification
+pytest>=8.3.0
+httpx>=0.27.0

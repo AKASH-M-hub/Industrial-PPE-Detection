@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables & Keys
+.env
+*.env
+*.key
+*.pem
+
+# Model weights & Large datasets (tracked separately or downloaded via script)
+weights/*.pt
+weights/*.onnx
+weights/*.engine
+!weights/.gitkeep
+data/
+runs/
+*.log
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

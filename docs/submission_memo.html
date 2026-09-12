@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technical Submission Memo - Constrained Object Detection &amp; Reasoning API</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       EXECUTIVE A4 MEMO VIEWER & PRINT ENGINE
+       ============================================================ */
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm 10mm 12mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      background: #090d16;
+      line-height: 1.5;
+      font-size: 10pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      min-height: 100vh;
+    }
+
+    /* Screen Top App Toolbar */
+    .screen-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #f8fafc;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toolbar-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+    }
+
+    .toolbar-text h1 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.2px;
+    }
+
+    .toolbar-text p {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-pill {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .btn-print {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      color: #ffffff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+    }
+
+    .btn-print:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    /* Document Workspace */
+    .document-workspace {
+      padding: 30px 16px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    /* A4 Paper Sheet (Realistic Presentation) */
+    .a4-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      max-width: 900px;
+      background: #ffffff;
+      padding: 40px 48px;
+      border-radius: 6px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Sheet Content */
+    .sheet-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      gap: 12px;
+    }
+
+    /* Sheet Footer */
+    .sheet-footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 8px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Executive Memo Header Banner */
+    .memo-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border-left: 4px solid #38bdf8;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .memo-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .memo-title {
+      font-size: 15pt;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #f8fafc;
+    }
+
+    .memo-tag {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 8pt;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .meta-badges {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      font-size: 8.5pt;
+    }
+
+    .badge-item {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .badge-label {
+      color: #94a3b8;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: block;
+    }
+
+    .badge-val {
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    /* Section Headings */
+    h2 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 9px;
+      margin-bottom: 4px;
+      padding-bottom: 2px;
+      border-bottom: 1.5px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h2 .section-weight {
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #0284c7;
+      background: #e0f2fe;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+
+    p {
+      font-size: 9.5pt;
+      color: #334155;
+      margin-bottom: 6px;
+      text-align: justify;
+      line-height: 1.6;
+    }
+
+    /* Metric Ribbon */
+    .metric-ribbon {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 8px 0;
+    }
+
+    .metric-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+
+    .metric-num {
+      font-size: 16pt;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .metric-name {
+      font-size: 8pt;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    /* Modern Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 10px 0;
+      font-size: 9pt;
+    }
+
+    th,
+    td {
+      padding: 6px 8px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      font-size: 8.2pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-top: 1px solid #cbd5e1;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    .pill-class {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+    }
+
+    .pill-hat {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .pill-vest {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .pill-person {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .pill-all {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    /* Comparison Grid */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 5px 0 6px 0;
+    }
+
+    .compare-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+
+    .compare-title {
+      font-size: 9pt;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .compare-card ul {
+      padding-left: 12px;
+      margin: 0;
+    }
+
+    .compare-card li {
+      font-size: 8.5pt;
+      color: #334155;
+      margin-bottom: 4px;
+      line-height: 1.5;
+    }
+
+    /* Pipeline Flow Box */
+    .pipeline-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-left: 3px solid #16a34a;
+      padding: 10px 14px;
+      border-radius: 5px;
+      margin: 8px 0;
+      font-size: 9pt;
+      color: #166534;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .callout-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-left: 3px solid #0284c7;
+      padding: 10px 14px;
+      border-radius: 4px;
+      margin: 8px 0;
+      font-size: 9pt;
+      color: #1e293b;
+      line-height: 1.6;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: #e2e8f0;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 8.5pt;
+      color: #0f172a;
+    }
+
+    .bonus-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .bonus-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+
+    .bonus-title {
+      font-weight: 700;
+      font-size: 9pt;
+      color: #0f172a;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .bonus-desc {
+      font-size: 8.2pt;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+       PRINT MEDIA SPECIFICATION: STRICT 2-PAGE A4 OUTPUT
+       ============================================================ */
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+
+      .screen-toolbar {
+        display: none !important;
+      }
+
+      .document-workspace {
+        padding: 0 !important;
+        gap: 0 !important;
+        display: block !important;
+      }
+
+      .a4-sheet {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 275mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+
+      .sheet-footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Screen Top Bar -->
+  <header class="screen-toolbar">
+    <div class="toolbar-left">
+      <div class="toolbar-icon">&#128220;</div>
+      <div class="toolbar-text">
+        <h1>Technical Submission Memo &bull; Executive 2-Page Whitepaper</h1>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <div class="status-pill">Strict 2-Page A4 Verified</div>
+      <button class="btn-print" onclick="window.print()">
+        <span>&#128424; Print / Save as PDF</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="document-workspace">
+
+    <!-- ========================================================
+         PAGE 1: PROBLEM SELECTION & PART A DETECTION BENCHMARK
+         ======================================================== -->
+    <article class="a4-sheet" id="page-1">
+      <div class="sheet-body">
+        <div class="memo-header">
+          <div class="memo-header-top">
+            <div class="memo-title">Technical Submission Memo: RT-DETR Vision &amp; Reasoning API</div>
+            <div class="memo-tag">ROUND 1 SCREENING</div>
+          </div>
+          <div class="meta-badges">
+            <div class="badge-item">
+              <span class="badge-label">Track</span>
+              <span class="badge-val">CV + Applied ML</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Domain</span>
+              <span class="badge-val">PPE Workplace Safety</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Architecture</span>
+              <span class="badge-val">RT-DETR-L + Groq Llama-3.3</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Confidence Cutoff</span>
+              <span class="badge-val">Unified 0.45</span>
+            </div>
+          </div>
+        </div>
+
+        <h2>
+          <span>1. Domain Selection &amp; Dataset Curation Strategy</span>
+          <span class="section-weight">15% Weight</span>
+        </h2>
+        <p>
+          <strong>Why this Domain &amp; Dataset?</strong> Industrial workplace safety represents a high-stakes environment where automated PPE auditing (e.g., OSHA 1926.100 compliance) can prevent fatal accidents. Standard generic COCO models are insufficient as they only recognize <code>person</code> objects. I chose this domain to demonstrate the ability to enforce strict safety compliance by detecting specific non-COCO protective gear (<span class="pill-class pill-hat">hat</span> and <span class="pill-class pill-vest">vest</span>), moving beyond simple bounding boxes to actual semantic reasoning for safety verification.
+        </p>
+        <p>
+          <strong>Sourcing &amp; Labeling Methodology:</strong> I sourced raw images from construction sites via the <em>Hard Hat Worker Safety Equipments</em> benchmark dataset on Roboflow. The dataset aggregates varied job-site perspectives, distances, and challenging lighting conditions (e.g., specular glare, occlusion). The images were manually audited and labeled using standard bounding box annotations for three strict classes: <code>person</code>, <code>hat</code>, and <code>vest</code>. To ensure benchmark integrity, duplicate or highly correlated video frames were aggressively purged prior to partitioning.
+        </p>
+        <p>
+          <strong>Stratified Site-Disjoint Partitioning:</strong>
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 12px 0;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 10px;">
+            <div style="font-weight: 700; font-size: 8.5pt; color: #0284c7; margin-bottom: 4px;">Train Set</div>
+            <div style="font-size: 8pt; color: #475569; line-height: 1.4;"><strong>2,605 images</strong> (360 insts)
+              &bull; Backprop &amp; transformer decoder optimization</div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 10px;">
+            <div style="font-weight: 700; font-size: 8.5pt; color: #0284c7; margin-bottom: 4px;">Validation Set</div>
+            <div style="font-size: 8pt; color: #475569; line-height: 1.4;"><strong>114 images</strong> &bull; Early
+              stopping &amp; anchor query selection tuning</div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 8px 10px;">
+            <div style="font-weight: 700; font-size: 8.5pt; color: #0284c7; margin-bottom: 4px;">Holdout Test Set</div>
+            <div style="font-size: 8pt; color: #475569; line-height: 1.4;"><strong>89 images</strong> (201 insts) &bull;
+              Sequestered benchmark evaluated only post-training</div>
+          </div>
+        </div>
+        <p>
+          <strong>Justification:</strong> Random uniform splitting on video captures causes severe optimistic bias due
+          to near-identical adjacent frames. Site-disjoint grouping ensures the model learns invariant semantic features
+          rather than memorizing background structures.
+        </p>
+
+        <h2>
+          <span>2. Evaluation Methodology &amp; Metric Honesty</span>
+          <span class="section-weight">10% Weight</span>
+        </h2>
+        <p>
+          Fine-tuned <strong>RT-DETR-L for 50 epochs (47.31 mins)</strong> on an <strong>NVIDIA Tesla T4 GPU (14.9 GB
+            VRAM)</strong> with PyTorch 2.11, CUDA 12.8, and AdamW optimizer (seed=42). Evaluated at the unified
+          <code>0.45</code> confidence threshold:
+        </p>
+
+        <div class="metric-ribbon">
+          <div class="metric-card">
+            <div class="metric-num" style="color: #0284c7;">0.9603</div>
+            <div class="metric-name">Overall mAP@50</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-num" style="color: #10b981;">0.9679</div>
+            <div class="metric-name">Precision (P)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-num" style="color: #6366f1;">0.9778</div>
+            <div class="metric-name">Recall (R)</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-num" style="color: #f59e0b;">0.7997</div>
+            <div class="metric-name">mAP@50-95</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Instances</th>
+              <th>Precision</th>
+              <th>Recall</th>
+              <th>mAP@50</th>
+              <th>mAP@50-95</th>
+              <th>Observed Class Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill-class pill-all">all</span></td>
+              <td><strong>201</strong></td>
+              <td><strong>0.9679</strong></td>
+              <td><strong>0.9778</strong></td>
+              <td><strong>0.9603</strong></td>
+              <td><strong>0.7997</strong></td>
+              <td>High generalization across varied illumination &amp; angles</td>
+            </tr>
+            <tr>
+              <td><span class="pill-class pill-person">person</span></td>
+              <td>90</td>
+              <td>0.978</td>
+              <td>0.978</td>
+              <td>0.975</td>
+              <td>0.900</td>
+              <td>Robust full-body localization; occlusion on dense scaffolding</td>
+            </tr>
+            <tr>
+              <td><span class="pill-class pill-vest">vest</span></td>
+              <td>66</td>
+              <td>0.971</td>
+              <td>1.000</td>
+              <td>0.969</td>
+              <td>0.857</td>
+              <td>100% recall on visible vests; specular glare on tape stripes</td>
+            </tr>
+            <tr>
+              <td><span class="pill-class pill-hat">hat</span></td>
+              <td>45</td>
+              <td>0.955</td>
+              <td>0.956</td>
+              <td>0.936</td>
+              <td><strong>0.641</strong></td>
+              <td><strong>High-IoU boundary variance on curved helmets &amp; distant heads</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="compare-grid">
+          <div class="compare-card">
+            <div class="compare-title" style="color: #15803d;">&check; What Metrics Prove</div>
+            <ul>
+              <li><strong>Reliable Query Selection:</strong> Elevated <code>mAP@50</code> (0.9603) and
+                <code>Recall</code> (0.9778) confirm RT-DETR-L locates PPE gear with minimal false negatives.
+              </li>
+              <li><strong>Zero Vest Misses:</strong> 1.000 Recall on <code>vest</code> ensures visible torso protection
+                is fully detected.</li>
+            </ul>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title" style="color: #b91c1c;">&cross; Acknowledged Critical Limitations</div>
+            <ul>
+              <li><strong>Steep <code>hat</code> Drop at High IoU:</strong> While <code>person</code> sustains 0.900
+                mAP@50-95, <code>hat</code> drops to <strong>0.641</strong> due to helmet curvature causing loose
+                bounding boxes under strict overlap.</li>
+              <li><strong>Scale Compression:</strong> Heads &gt;25m compress to &lt;20&times;20px (&lt;0.05% of frame),
+                dropping scores below 0.45.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <footer class="sheet-footer">
+        <span>Constrained Object Detection &amp; Reasoning API &bull;</span>
+        <span>Page 1 of 2</span>
+      </footer>
+    </article>
+
+    <!-- ========================================================
+         PAGE 2: ROOT-CAUSE FAILURE MODES & PART B REASONING
+         ======================================================== -->
+    <article class="a4-sheet" id="page-2">
+      <div class="sheet-body">
+        <h2>
+          <span>3. Five Model Failure Cases &amp; Root-Cause Analysis</span>
+          <span class="section-weight">15% Weight</span>
+        </h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 10%;">ID</th>
+              <th style="width: 18%;">Category</th>
+              <th style="width: 44%;">Root Cause &amp; Physics of Failure</th>
+              <th style="width: 28%;">Engineering Mitigation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>FC-01</strong></td>
+              <td><span style="color: #c2410c; font-weight: 600;">Distant Scale</span></td>
+              <td>Worker is ~30m distant; head occupies 14&times;16px (&lt;0.05% frame). Feature downsampling in CNN
+                backbone attenuates curvature tokens; confidence drops to 0.31 (&lt;0.45 cutoff).</td>
+              <td>Integrate SAHI (Slicing Aided Hyper Inference) or infer at 1024&times;1024 resolution.</td>
+            </tr>
+            <tr>
+              <td><strong>FC-02</strong></td>
+              <td><span style="color: #c2410c; font-weight: 600;">Occlusion</span></td>
+              <td>Diagonal steel scaffolding pole blocks 65% of torso. Bipartite matching in transformer decoder treats
+                fragmented fluorescent vest patches as background clutter.</td>
+              <td>Synthesize cross-hatch occlusion bars and CutMix augmentations during training.</td>
+            </tr>
+            <tr>
+              <td><strong>FC-03</strong></td>
+              <td><span style="color: #c2410c; font-weight: 600;">Confusion</span></td>
+              <td>Yellow baseball cap misclassified as <code>hat</code> (score: 0.51). Downward sunlight creates
+                specular highlights on cap brim mimicking plastic helmet curvature.</td>
+              <td>Mine hard negatives of non-PPE civilian headwear (beanies, caps, turbans).</td>
+            </tr>
+            <tr>
+              <td><strong>FC-04</strong></td>
+              <td><span style="color: #c2410c; font-weight: 600;">Specular Glare</span></td>
+              <td>Direct sunlight off microprismatic tape causes 8-bit sensor saturation (RGB 255 bloom), destroying
+                color saturation channels and causing false negative.</td>
+              <td>Apply photometric HSV jitter, random gamma correction, and simulated lens flares.</td>
+            </tr>
+            <tr>
+              <td><strong>FC-05</strong></td>
+              <td><span style="color: #c2410c; font-weight: 600;">Crowd Overlap</span></td>
+              <td>3 workers standing shoulder-to-shoulder produce merged bounding boxes. High IoU (&gt;0.65) among
+                adjacent workers leads to query competition in decoder.</td>
+              <td>Increase RT-DETR decoder query count from 300 to 500 and tune Hungarian loss cost.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>
+          <span>4. Part B: Minimal Reasoning Layer, Intent Routing, &amp; Guardrails</span>
+          <span class="section-weight">15% Weight</span>
+        </h2>
+        <p>
+          <strong>Zero-Framework Architecture:</strong> In strict compliance with Constraint #1, absolutely no agentic
+          frameworks (LangChain, LangGraph, CrewAI, AutoGen) are used. Implemented in <strong>pure Python with direct
+            Groq API calls (<code>llama-3.3-70b-versatile</code>)</strong>.
+        </p>
+
+        <div class="pipeline-box">
+          User Query &rarr; [1] IntentRouter (Token Classifier) &rarr; [2] RT-DETR (0.45 Filter) &rarr; [3]
+          ConfidenceGuardrail (Blur/Scale Audit) &rarr; [4] Groq LLM (Plain English Synthesis)
+        </div>
+
+        <p>
+          <strong>Intent Routing Logic:</strong> Regex semantic tokens (e.g. <code>\bhelmet\b</code>,
+          <code>\bworker\b</code>, <code>\bvest\b</code>, <code>\bviolation\b</code>) route to the detector. General
+          queries (e.g. OSHA penalty formulas, weather, greetings) route directly to the LLM, <strong>saving 41ms of GPU
+            tensor operations</strong>.
+        </p>
+
+        <div class="callout-box">
+          <div style="font-weight: 700; font-size: 9.5pt; margin-bottom: 6px; color: #0369a1;">Strict Confidence
+            Guardrail &amp; Concrete Insufficient Information Output:</div>
+          <div style="font-size: 8.5pt; color: #334155; line-height: 1.6;">
+            &bull; <strong>Laplacian Blur Check:</strong> Evaluates focus variance &sigma;<sup>2</sup> =
+            Var(&nabla;<sup>2</sup>I). If &sigma;<sup>2</sup> &lt; 60.0, flags severe blur.<br>
+            &bull; <strong>Spatial Gating:</strong> If all detections fall below 0.45 or occupy &lt;0.05% of frame area,
+            refuses to guess.<br>
+            &bull; <strong>Live Concrete Example:</strong><br>
+            &nbsp;&nbsp;<em>Input:</em> Perimeter camera image in morning drizzle (&sigma;<sup>2</sup> = 24.3 &lt;
+            60.0). <em>Question:</em> &ldquo;Is the worker in the background wearing a helmet?&rdquo;<br>
+            &nbsp;&nbsp;<em>Response:</em> <code>"status": "insufficient_information"</code> |
+            <code>"answer": "Insufficient information: Image resolution or focus is too degraded (Laplacian sharpness variance: 24.3 &lt; 60.0) to reliably verify PPE safety compliance."</code>
+          </div>
+        </div>
+
+        <h2>
+          <span>5. Production Readiness, API, &amp; Bonus Implementation</span>
+          <span class="section-weight">10% Bonus</span>
+        </h2>
+
+        <div class="bonus-grid">
+          <div class="bonus-card">
+            <div class="bonus-title">&#128230; Containerization</div>
+            <div class="bonus-desc">Multi-stage <code>Dockerfile</code> &amp; <code>docker-compose.yml</code> with
+              automatic healthchecks and CPU/CUDA runtime switching.</div>
+          </div>
+          <div class="bonus-card">
+            <div class="bonus-title">&#9889; FastAPI Endpoints</div>
+            <div class="bonus-desc"><code>POST /api/v1/detect</code>, <code>POST /api/v1/reason</code>, and
+              <code>GET /health</code> with Pydantic v2 schemas and <code>X-Process-Time-Ms</code> header.
+            </div>
+          </div>
+          <div class="bonus-card">
+            <div class="bonus-title">&#128202; Structured Telemetry</div>
+            <div class="bonus-desc">Loguru structured file rotation (50MB/10-day retention), request latency timing, and
+              zero-login device-isolated inspection history.</div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="sheet-footer">
+        <span>Constrained Object Detection &amp; Reasoning API &bull;</span>
+        <span>Page 2 of 2</span>
+      </footer>
+    </article>
+
+  </main>
+
+</body>
+
+</html>

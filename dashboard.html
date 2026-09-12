@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PPE Safety Vision & Reasoning Console</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: rgba(18, 24, 38, 0.85);
+      --bg-input: #0d131f;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(255, 255, 255, 0.16);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #38bdf8;
+      --accent-bg: rgba(56, 189, 248, 0.1);
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.1);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.1);
+      --danger: #f43f5e;
+      --danger-bg: rgba(244, 63, 94, 0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-sans: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Navigation Bar */
+    nav {
+      height: 64px;
+      padding: 0 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(9, 13, 22, 0.9);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+      overflow: hidden;
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .brand-text h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      color: var(--text-primary);
+    }
+
+    .nav-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    /* Main Workspace Layout */
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      padding: 24px 28px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Card Containers */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--accent-bg);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    /* Left Panel: Viewport */
+    .viewport-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 520px;
+      position: relative;
+      padding: 20px;
+      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.2) 0%, transparent 70%);
+    }
+
+    /* Modern Dropzone */
+    .dropzone {
+      width: 100%;
+      max-width: 440px;
+      padding: 44px 24px;
+      border: 2px dashed rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .dropzone:hover,
+    .dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.04);
+      transform: translateY(-2px);
+    }
+
+    .dropzone-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 20px;
+      color: var(--accent);
+    }
+
+    .dropzone h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .dropzone p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    /* Canvas Stage */
+    .canvas-stage {
+      display: none;
+      position: relative;
+      max-width: 100%;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    #preview-canvas {
+      display: block;
+      max-height: 540px;
+      max-width: 100%;
+      object-fit: contain;
+    }
+
+    /* Floating Telemetry Strip */
+    .telemetry-strip {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+
+    .chip-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip-circle {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Right Panel: Controls & Reasoning */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Detection Stat Grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 16px;
+      background: rgba(13, 19, 31, 0.6);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-tile {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-tile .num {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-tile .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      padding: 10px 16px 0;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .json-console {
+      background: #070a10;
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #cbd5e1;
+      max-height: 160px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+
+    /* PART B: Question Answering */
+    .reasoning-section {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 16px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+    }
+
+    .btn-ask {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      color: white;
+      border: none;
+      padding: 0 20px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-ask:hover:not(:disabled) {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn-ask:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pill:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    /* Answer Card - 3 Clean Distinct States */
+    .answer-card {
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      transition: all 0.3s;
+    }
+
+    .ans-verified {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .ans-verified .ans-tag {
+      color: var(--success);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ans-bypassed {
+      background: rgba(56, 189, 248, 0.06);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .ans-bypassed .ans-tag {
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ans-guardrail {
+      background: rgba(245, 158, 11, 0.06);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    .ans-guardrail .ans-tag {
+      color: var(--warning);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ans-idle {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+      text-align: center;
+      padding: 22px;
+    }
+
+    .ans-meta {
+      margin-top: 10px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+    }
+
+    /* DEVICE ACTIVITY HISTORY PANEL */
+    .history-card {
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .history-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .history-badge {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+    }
+
+    .btn-clear-history {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .btn-clear-history:hover {
+      color: var(--danger);
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .history-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .history-item:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.04);
+    }
+
+    .history-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .history-query {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .history-time {
+      color: var(--text-muted);
+      font-size: 10px;
+      font-family: var(--font-mono);
+    }
+
+    .history-verdict {
+      font-size: 11px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-empty {
+      text-align: center;
+      padding: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Progress Line */
+    .progress-line {
+      height: 2px;
+      width: 100%;
+      background: transparent;
+      overflow: hidden;
+      position: relative;
+      display: none;
+    }
+
+    .progress-line::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 30%;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: slide 1.2s infinite ease-in-out;
+    }
+
+    @keyframes slide {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(350%);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <div class="nav-brand">
+      <div class="brand-logo">
+        <img src="favicon.svg" alt="PPE Safety Helmet" />
+      </div>
+      <div class="brand-text">
+        <h1>PPE Safety Vision & Reasoning Console</h1>
+      </div>
+    </div>
+    <div class="nav-pills">
+      <div class="nav-pill" id="backend-chip" style="cursor: pointer;" title="Click to configure Backend API URL" onclick="changeApiBase()">
+        <span class="status-dot" id="backend-dot"></span>
+        API: <strong id="backend-label">Connecting...</strong>
+      </div>
+      <div class="nav-pill">Threshold: <strong>0.45</strong></div>
+      <div class="nav-pill" id="latency-chip">Latency: <strong>-- ms</strong></div>
+    </div>
+  </nav>
+
+  <div class="workspace">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>Inspection Canvas</span>
+          <span class="badge" id="image-res-badge">No Image</span>
+        </div>
+        <button class="pill" onclick="resetCanvas()">Clear Image</button>
+      </div>
+
+      <div class="progress-line" id="det-progress"></div>
+
+      <div class="viewport-body" id="viewport">
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+          <div class="dropzone-icon">📷</div>
+          <h3>Select or Drop Image Here</h3>
+          <p>Supports JPG, PNG, WEBP from your test set</p>
+        </div>
+        <input type="file" id="file-input" accept="image/*" />
+
+        <div class="canvas-stage" id="canvas-stage">
+          <canvas id="preview-canvas"></canvas>
+          <div class="telemetry-strip">
+            <div class="chip-tag">
+              <div class="chip-circle" style="background:#f59e0b;"></div><span id="chip-person">Person: 0</span>
+            </div>
+            <div class="chip-tag">
+              <div class="chip-circle" style="background:#10b981;"></div><span id="chip-hat">Hat: 0</span>
+            </div>
+            <div class="chip-tag">
+              <div class="chip-circle" style="background:#38bdf8;"></div><span id="chip-vest">Vest: 0</span>
+            </div>
+            <div class="chip-tag"
+              style="border-left: 1px solid var(--border); padding-left: 10px; color: var(--text-muted);"><span
+                id="chip-sharpness">Sharpness: --</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="card">
+        <div class="card-header" style="border-bottom: none; padding-bottom: 0;">
+          <div class="card-title">Part A: Detection Overview</div>
+          <div class="tab-bar">
+            <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">Summary</button>
+            <button class="tab-btn" id="tab-json-btn" onclick="switchTab('json')">Raw JSON</button>
+          </div>
+        </div>
+
+        <div id="view-summary">
+          <div class="stat-grid">
+            <div class="stat-tile">
+              <div class="num" id="stat-person" style="color: #f59e0b;">0</div>
+              <div class="label">Workers</div>
+            </div>
+            <div class="stat-tile">
+              <div class="num" id="stat-hat" style="color: #10b981;">0</div>
+              <div class="label">Helmets</div>
+            </div>
+            <div class="stat-tile">
+              <div class="num" id="stat-vest" style="color: #38bdf8;">0</div>
+              <div class="label">Safety Vests</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="view-json" style="display: none;">
+          <div class="json-console" id="json-box">
+            <span style="color: var(--text-muted);">// Upload an image to inspect detections...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1;">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Part B: Natural Language Reasoning</span>
+            <span class="badge"
+              style="background: rgba(16, 185, 129, 0.1); color: var(--success); border-color: rgba(16, 185, 129, 0.2);">Zero
+              Frameworks</span>
+          </div>
+        </div>
+
+        <div class="progress-line" id="reason-progress"></div>
+
+        <div class="reasoning-section">
+          <div class="input-group">
+            <input type="text" class="search-input" id="question-input"
+              placeholder="Ask anything about the image (e.g. Is he wearing helmet or not?)"
+              value="Is he wearing helmet or not ?" />
+            <button class="btn-ask" id="ask-btn" onclick="askQuestion()">
+              <span>Ask</span>
+            </button>
+          </div>
+
+          <div class="pill-row">
+            <div class="pill" onclick="setQuery('Is he wearing helmet or not ?')">Helmet Check</div>
+            <div class="pill" onclick="setQuery('Is anyone missing a safety vest?')">Vest Check</div>
+            <div class="pill" onclick="setQuery('How many total workers are present?')">Count Workers</div>
+            <div class="pill" onclick="setQuery('What is the capital of France?')">Off-Topic (Test Router)</div>
+          </div>
+
+          <div class="answer-card ans-idle" id="answer-card">
+            Hi, click <strong>Ask</strong> to solve your PPE safety related questions.
+          </div>
+
+          <div class="history-card">
+            <div class="history-header">
+              <div class="history-title">
+                <span>Device Activity History</span>
+                <span class="history-badge" id="history-count">0</span>
+              </div>
+              <button class="btn-clear-history" onclick="clearDeviceHistory()">Clear Device Log</button>
+            </div>
+            <div class="history-list" id="history-list">
+              <div class="history-empty">No activity recorded on this device yet.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Backend API URL: Checks localStorage first, then detects if running locally
+    let API_BASE = localStorage.getItem("ppe_api_base") || (
+      window.location.origin.includes(":8000") || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? (window.location.origin.includes(":8000") ? window.location.origin : "http://localhost:8000")
+        : "http://localhost:8000"
+    );
+
+    const STORAGE_KEY = "ppe_inspection_device_history_v1";
+
+    function updateApiDisplay() {
+      const label = document.getElementById("backend-label");
+      const dot = document.getElementById("backend-dot");
+      if (!label) return;
+      try {
+        const u = new URL(API_BASE);
+        label.innerText = u.host.replace(/\.hf\.space$/, ' (HF)').replace(/\.vercel\.app$/, '');
+      } catch (e) {
+        label.innerText = API_BASE.slice(0, 18);
+      }
+    }
+
+    async function checkBackendHealth() {
+      const dot = document.getElementById("backend-dot");
+      if (!dot) return;
+      try {
+        const res = await fetch(`${API_BASE}/health`, { method: "GET", signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          dot.style.background = "var(--success)";
+          dot.style.boxShadow = "0 0 8px var(--success)";
+        } else {
+          dot.style.background = "var(--warning)";
+          dot.style.boxShadow = "0 0 8px var(--warning)";
+        }
+      } catch (err) {
+        dot.style.background = "var(--danger)";
+        dot.style.boxShadow = "0 0 8px var(--danger)";
+      }
+    }
+
+    function changeApiBase() {
+      const current = localStorage.getItem("ppe_api_base") || API_BASE;
+      const next = prompt("Enter your Backend API Base URL (e.g. your Hugging Face Space URL: https://your-username-space-name.hf.space):", current);
+      if (next !== null && next.trim()) {
+        const clean = next.trim().replace(/\/+$/, "");
+        localStorage.setItem("ppe_api_base", clean);
+        API_BASE = clean;
+        updateApiDisplay();
+        checkBackendHealth();
+      }
+    }
+
+    let uploadedFile = null;
+    let cachedImage = null;
+
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("file-input");
+    const canvasStage = document.getElementById("canvas-stage");
+    const canvas = document.getElementById("preview-canvas");
+    const ctx = canvas.getContext("2d");
+    const questionInput = document.getElementById("question-input");
+    const answerCard = document.getElementById("answer-card");
+    const askBtn = document.getElementById("ask-btn");
+    const detProgress = document.getElementById("det-progress");
+    const reasonProgress = document.getElementById("reason-progress");
+    const historyList = document.getElementById("history-list");
+    const historyCount = document.getElementById("history-count");
+
+    loadDeviceHistory();
+    updateApiDisplay();
+    checkBackendHealth();
+    setInterval(checkBackendHealth, 15000);
+
+    // Drag & Drop
+    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("drag-over"); });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag-over"));
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("drag-over");
+      if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files[0]) handleUpload(e.target.files[0]);
+    });
+    questionInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        askQuestion();
+      }
+    });
+
+    function handleUpload(file) {
+      uploadedFile = file;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          cachedImage = img;
+          dropzone.style.display = "none";
+          canvasStage.style.display = "block";
+          document.getElementById("image-res-badge").innerText = `${img.width} × ${img.height} px`;
+          renderBaseImage(img);
+          callDetect(file);
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderBaseImage(img) {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+    }
+
+    async function callDetect(file) {
+      detProgress.style.display = "block";
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const t0 = performance.now();
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/detect`, {
+          method: "POST",
+          body: formData
+        });
+        const latency = Math.round(performance.now() - t0);
+        document.getElementById("latency-chip").innerHTML = `Latency: <strong>${latency} ms</strong>`;
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        updateStats(data);
+        renderBoxes(data);
+        renderJson(data);
+
+        saveActivity({
+          type: "detect",
+          title: `Detection Scan (${data.total_detections} object${data.total_detections === 1 ? '' : 's'})`,
+          detail: `Workers: ${data.counts_by_class.person || 0} | Hats: ${data.counts_by_class.hat || 0} | Vests: ${data.counts_by_class.vest || 0}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          tag: data.counts_by_class.hat < (data.counts_by_class.person || 0) ? "Violation" : "Compliant"
+        });
+      } catch (err) {
+        console.error(err);
+        answerCard.className = "answer-card ans-guardrail";
+        answerCard.innerHTML = `<div class="ans-tag">⚠️ Server Communication Error</div><div>Could not reach detector at ${API_BASE}. Ensure server is running.</div>`;
+      } finally {
+        detProgress.style.display = "none";
+      }
+    }
+
+    function updateStats(data) {
+      const counts = data.counts_by_class || {};
+      const persons = counts.person || 0;
+      const hats = counts.hat || 0;
+      const vests = counts.vest || 0;
+
+      document.getElementById("stat-person").innerText = persons;
+      document.getElementById("stat-hat").innerText = hats;
+      document.getElementById("stat-vest").innerText = vests;
+
+      document.getElementById("chip-person").innerText = `Person: ${persons}`;
+      document.getElementById("chip-hat").innerText = `Hat: ${hats}`;
+      document.getElementById("chip-vest").innerText = `Vest: ${vests}`;
+
+      if (data.image_metadata) {
+        document.getElementById("chip-sharpness").innerText = `Sharpness: ${data.image_metadata.blur_laplacian_variance.toFixed(1)}`;
+      }
+    }
+
+    function renderBoxes(data) {
+      if (!cachedImage) return;
+      renderBaseImage(cachedImage);
+
+      const detections = data.detections || [];
+      detections.forEach(d => {
+        const { x1, y1, x2, y2 } = d.box;
+        const w = x2 - x1;
+        const h = y2 - y1;
+        const cls = d.class_name.toLowerCase();
+
+        let color = "#38bdf8";
+        if (cls.includes("hat")) color = "#10b981";
+        if (cls.includes("person")) color = "#f59e0b";
+
+        ctx.lineWidth = Math.max(2, Math.round(canvas.width / 400));
+        ctx.strokeStyle = color;
+        ctx.strokeRect(x1, y1, w, h);
+
+        const label = `${d.class_name.toUpperCase()} ${(d.confidence * 100).toFixed(1)}%`;
+        const fontSize = Math.max(11, Math.round(canvas.width / 50));
+        ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+
+        const txtW = ctx.measureText(label).width;
+        const padX = 6;
+        const padY = 4;
+        const pillH = fontSize + padY * 2;
+        const pillW = txtW + padX * 2;
+        const pillY = (y1 - pillH < 0) ? y1 : y1 - pillH;
+
+        ctx.fillStyle = color;
+        ctx.fillRect(x1, pillY, pillW, pillH);
+
+        ctx.fillStyle = "#090d16";
+        ctx.fillText(label, x1 + padX, pillY + fontSize);
+      });
+    }
+
+    async function askQuestion() {
+      if (!uploadedFile) {
+        alert("Please select an inspection image first.");
+        return;
+      }
+      const q = questionInput.value.trim();
+      if (!q) return;
+
+      askBtn.disabled = true;
+      reasonProgress.style.display = "block";
+      answerCard.className = "answer-card ans-idle";
+      answerCard.innerHTML = `Synthesizing safety analysis...`;
+
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+      formData.append("question", q);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/reason`, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderAnswer(data);
+
+        saveActivity({
+          type: "reason",
+          title: `Q: "${q}"`,
+          detail: data.answer,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          tag: data.status === "insufficient_information" ? "Guardrail" : (data.intent_routing && !data.intent_routing.needs_detection ? "Bypassed" : "Verified")
+        });
+      } catch (e) {
+        answerCard.className = "answer-card ans-guardrail";
+        answerCard.innerHTML = `<div class="ans-tag">⚠️ Query Failed</div><div>${e.message}</div>`;
+      } finally {
+        askBtn.disabled = false;
+        reasonProgress.style.display = "none";
+      }
+    }
+
+    function renderAnswer(data) {
+      const isBypassed = data.intent_routing && !data.intent_routing.needs_detection;
+      const isGuardrail = data.status === "insufficient_information" || (data.guardrail_result && !data.guardrail_result.is_sufficient);
+
+      if (isBypassed) {
+        answerCard.className = "answer-card ans-bypassed";
+        answerCard.innerHTML = `
+        <div class="ans-tag">⚡ Direct Knowledge (Vision Bypassed)</div>
+        <div style="color: #f1f5f9;">${escapeHtml(data.answer)}</div>
+        <div class="ans-meta">
+          <span>Rule: ${data.intent_routing.reasoning}</span>
+          <span>Latency: ${data.total_latency_ms}ms</span>
+        </div>
+      `;
+      } else if (isGuardrail) {
+        answerCard.className = "answer-card ans-guardrail";
+        answerCard.innerHTML = `
+        <div class="ans-tag">⚠️ Guardrail: Insufficient Information</div>
+        <div style="font-weight: 500; color: #fef3c7;">${escapeHtml(data.answer)}</div>
+        <div class="ans-meta">
+          <span>Check: ${data.guardrail_result ? data.guardrail_result.message : "Low Confidence"}</span>
+        </div>
+      `;
+      } else {
+        answerCard.className = "answer-card ans-verified";
+        answerCard.innerHTML = `
+        <div class="ans-tag">✓ Verified Compliance Assessment</div>
+        <div style="color: #f8fafc; font-size: 13.5px;">${escapeHtml(data.answer)}</div>
+        <div class="ans-meta">
+          <span>Model: ${data.model_used}</span>
+          <span>Latency: ${data.total_latency_ms}ms</span>
+        </div>
+      `;
+      }
+    }
+
+    function setQuery(q) {
+      questionInput.value = q;
+      if (uploadedFile) askQuestion();
+    }
+
+    function resetCanvas() {
+      uploadedFile = null;
+      cachedImage = null;
+      dropzone.style.display = "block";
+      canvasStage.style.display = "none";
+      document.getElementById("image-res-badge").innerText = "No Image";
+      document.getElementById("stat-person").innerText = "0";
+      document.getElementById("stat-hat").innerText = "0";
+      document.getElementById("stat-vest").innerText = "0";
+      answerCard.className = "answer-card ans-idle";
+      answerCard.innerHTML = `Hi, click <strong>Ask</strong> to solve your PPE safety related questions.`;
+    }
+
+    function switchTab(tab) {
+      const summaryBtn = document.getElementById("tab-summary-btn");
+      const jsonBtn = document.getElementById("tab-json-btn");
+      const summaryView = document.getElementById("view-summary");
+      const jsonView = document.getElementById("view-json");
+
+      if (tab === 'json') {
+        jsonBtn.classList.add("active");
+        summaryBtn.classList.remove("active");
+        jsonView.style.display = "block";
+        summaryView.style.display = "none";
+      } else {
+        summaryBtn.classList.add("active");
+        jsonBtn.classList.remove("active");
+        summaryView.style.display = "block";
+        jsonView.style.display = "none";
+      }
+    }
+
+    function renderJson(obj) {
+      const jsonBox = document.getElementById("json-box");
+      const str = JSON.stringify(obj, null, 2);
+      jsonBox.innerHTML = `<pre>${escapeHtml(str)}</pre>`;
+    }
+
+    function escapeHtml(str) {
+      const p = document.createElement('p');
+      p.appendChild(document.createTextNode(str));
+      return p.innerHTML;
+    }
+
+    function getDeviceHistory() {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveActivity(item) {
+      try {
+        const history = getDeviceHistory();
+        history.unshift(item);
+        if (history.length > 25) history.pop();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        renderDeviceHistory(history);
+      } catch (e) {
+        console.warn("Storage write failed", e);
+      }
+    }
+
+    function loadDeviceHistory() {
+      const history = getDeviceHistory();
+      renderDeviceHistory(history);
+    }
+
+    function renderDeviceHistory(history) {
+      historyCount.innerText = history.length;
+      if (!history || history.length === 0) {
+        historyList.innerHTML = `<div class="history-empty">No activity recorded on this device yet.</div>`;
+        return;
+      }
+
+      historyList.innerHTML = history.map((h, idx) => {
+        let tagColor = "var(--text-muted)";
+        if (h.tag === "Violation") tagColor = "var(--danger)";
+        else if (h.tag === "Compliant" || h.tag === "Verified") tagColor = "var(--success)";
+        else if (h.tag === "Guardrail") tagColor = "var(--warning)";
+        else if (h.tag === "Bypassed") tagColor = "var(--accent)";
+
+        return `
+        <div class="history-item" onclick="restoreHistoryItem(${idx})">
+          <div class="history-top">
+            <span class="history-query">${escapeHtml(h.title)}</span>
+            <span class="history-time">${h.timestamp}</span>
+          </div>
+          <div class="history-verdict" style="color: ${tagColor};">${escapeHtml(h.detail)}</div>
+        </div>
+      `;
+      }).join('');
+    }
+
+    function restoreHistoryItem(idx) {
+      const history = getDeviceHistory();
+      const item = history[idx];
+      if (!item) return;
+
+      if (item.type === "reason") {
+        answerCard.className = "answer-card ans-verified";
+        answerCard.innerHTML = `
+        <div class="ans-tag">⏱️ Restored from Device Log (${item.timestamp})</div>
+        <div style="color: #f8fafc; font-size: 13.5px;">${escapeHtml(item.detail)}</div>
+      `;
+        const cleanQ = item.title.replace(/^Q:\s*"/, '').replace(/"$/, '');
+        questionInput.value = cleanQ;
+      }
+    }
+
+    function clearDeviceHistory() {
+      if (confirm("Clear all inspection activity recorded on this device?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        renderDeviceHistory([]);
+      }
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+services:
+  ppe-vision-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ppe-detection-reasoning-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=llama-3.3-70b-versatile
+      - MODEL_PATH=weights/rtdetr_ppe_best.pt
+      - CONFIDENCE_THRESHOLD=0.45
+      - IOU_THRESHOLD=0.50
+      - DEVICE=cpu
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./weights:/app/weights
+      - ./runs:/app/runs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

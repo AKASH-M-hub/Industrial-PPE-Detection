@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="hatGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f87171" />
+      <stop offset="35%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Rounded App Tile Background -->
+  <rect width="64" height="64" rx="14" fill="url(#bgGrad)" />
+  
+  <!-- Chin Strap -->
+  <path d="M22 37 C22 52, 42 52, 42 37" fill="none" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round"/>
+  <rect x="28.5" y="45.5" width="7" height="3" rx="1.5" fill="#334155" />
+
+  <!-- Hard Hat Crown -->
+  <path d="M19 33.5 C19 18, 45 18, 45 33.5 Z" fill="url(#hatGrad)" filter="url(#shadow)"/>
+  
+  <!-- Ridge / Center Rib of Helmet -->
+  <path d="M28 20 C30 18, 34 18, 36 20 L35 33 L29 33 Z" fill="#fca5a5" opacity="0.35"/>
+
+  <!-- Hard Hat Brim -->
+  <ellipse cx="32" cy="34" rx="19" ry="4" fill="#b91c1c" />
+  <ellipse cx="32" cy="33.2" rx="18.5" ry="3.2" fill="#ef4444" />
+
+  <!-- White Safety Cross Emblem -->
+  <rect x="30" y="21.5" width="4" height="8" rx="1" fill="#ffffff" />
+  <rect x="28" y="23.5" width="8" height="4" rx="1" fill="#ffffff" />
+</svg>
