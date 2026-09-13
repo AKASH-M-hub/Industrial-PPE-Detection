@@ -72,13 +72,11 @@ def reason_ppe_gpu(image, question):
             return json.dumps({"error": "Invalid image payload."})
         buf = io.BytesIO()
         pil_img.save(buf, format="JPEG")
-        det_response = detector.predict(buf.getvalue())
-
         engine = get_reasoning_engine()
         reason_res = engine.reason(
             question=question or "Is everyone wearing required PPE?",
-            detection_data=det_response.model_dump(),
-            image_metadata=det_response.image_metadata.model_dump()
+            image_bytes=buf.getvalue(),
+            detector=detector
         )
         return reason_res.model_dump_json()
     except Exception as e:

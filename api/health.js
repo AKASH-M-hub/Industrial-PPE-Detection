@@ -9,6 +9,7 @@ export default async function handler(req, res) {
 
   const hfBase = 'https://akashhhhwqx-ppe-safety-backend.hf.space';
   const urls = [
+    `${hfBase}/config`,
     `${hfBase}/api/v1/health`,
     `${hfBase}/health`,
   ];
