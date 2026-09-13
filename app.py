@@ -1,3 +1,16 @@
+try:
+    import spaces
+except ImportError:
+    class _MockSpaces:
+        @staticmethod
+        def GPU(task=None, duration=60, **kwargs):
+            if callable(task):
+                return task
+            def decorator(f):
+                return f
+            return decorator
+    spaces = _MockSpaces()
+
 import os
 import io
 import time
@@ -7,24 +20,17 @@ from PIL import Image
 from loguru import logger
 import gradio as gr
 
-# ZeroGPU Compatibility Layer
-try:
-    import spaces
-except ImportError:
-    class _MockSpaces:
-        @staticmethod
-        def GPU(fn=None, duration=60):
-            if fn is not None:
-                return fn
-            def decorator(f):
-                return f
-            return decorator
-    spaces = _MockSpaces()
-
 from src.api.routes import router as api_router
 from src.config import settings
 from src.detector.model import get_detector
 from src.reasoning.engine import get_reasoning_engine
+
+
+# ZeroGPU startup verification probe
+@spaces.GPU
+def _zerogpu_probe():
+    """Startup probe registered for Hugging Face ZeroGPU runtime supervisor."""
+    return True
 
 
 def _to_pil_image(image):
@@ -137,47 +143,28 @@ with gr.Blocks(title="PPE Safety Vision & Reasoning Console") as demo:
     cpu_detect_btn.click(fn=predict_ppe_cpu, inputs=input_img, outputs=output_result, api_name="predict_cpu")
     cpu_reason_btn.click(fn=reason_ppe_cpu, inputs=[input_img, question_input], outputs=reason_result, api_name="reason_cpu")
 
-
-if __name__ == "__main__":
-    demo.queue()
-
-    # Launch Gradio server (ZeroGPU hooks into demo.launch)
-    launch_res = None
+# Attach API routes directly to demo.app before launch
+if hasattr(demo, "app") and demo.app is not None:
     try:
-        launch_res = demo.launch(prevent_thread_lock=True)
-    except Exception as e:
-        logger.warning(f"Standard launch fallback: {e}")
-        launch_res = demo.launch(server_name="0.0.0.0", server_port=7860, prevent_thread_lock=True)
-
-    # Extract FastAPI app from running Gradio instance
-    active_app = None
-    if isinstance(launch_res, tuple) and len(launch_res) > 0:
-        active_app = launch_res[0]
-    elif hasattr(demo, "server") and hasattr(demo.server, "app"):
-        active_app = demo.server.app
-    elif hasattr(demo, "app"):
-        active_app = demo.app
-
-    if active_app and hasattr(active_app, "include_router"):
-        logger.info(f"Attaching API routes to active FastAPI app: {active_app}")
-        active_app.include_router(api_router, prefix=settings.API_V1_STR)
-        active_app.include_router(api_router)
+        logger.info("Attaching FastAPI routes to demo.app before launch")
+        demo.app.include_router(api_router, prefix=settings.API_V1_STR)
+        demo.app.include_router(api_router)
 
         # Shift API routes to index 0 so they evaluate before Gradio catch-all
         api_routes = [
-            r for r in active_app.router.routes 
+            r for r in demo.app.router.routes 
             if hasattr(r, "path") and (
                 r.path.startswith("/api/v1") or 
                 r.path in ("/health", "/detect", "/reason", "/dashboard", "/memo")
             )
         ]
-        other_routes = [r for r in active_app.router.routes if r not in api_routes]
-        active_app.router.routes = api_routes + other_routes
-        logger.info(f"Successfully mounted {len(api_routes)} API routes at index 0 of router.routes!")
+        other_routes = [r for r in demo.app.router.routes if r not in api_routes]
+        demo.app.router.routes = api_routes + other_routes
+        logger.info(f"Successfully mounted {len(api_routes)} API routes at index 0 of demo.app!")
+    except Exception as mount_err:
+        logger.warning(f"Could not pre-mount FastAPI routes on demo.app: {mount_err}")
 
-    # Keep the server alive
-    try:
-        demo.block_thread()
-    except Exception:
-        while True:
-            time.sleep(3600)
+
+if __name__ == "__main__":
+    demo.queue().launch()
+

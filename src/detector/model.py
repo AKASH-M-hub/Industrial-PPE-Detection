@@ -1,3 +1,16 @@
+try:
+    import spaces
+except ImportError:
+    class _MockSpaces:
+        @staticmethod
+        def GPU(task=None, duration=60, **kwargs):
+            if callable(task):
+                return task
+            def decorator(f):
+                return f
+            return decorator
+    spaces = _MockSpaces()
+
 import io
 import os
 import time
@@ -7,18 +20,6 @@ import numpy as np
 from PIL import Image
 from loguru import logger
 
-try:
-    import spaces
-except ImportError:
-    class _MockSpaces:
-        @staticmethod
-        def GPU(fn=None, duration=60):
-            if fn is not None:
-                return fn
-            def decorator(f):
-                return f
-            return decorator
-    spaces = _MockSpaces()
 
 from src.config import settings
 from src.detector.schemas import (
@@ -129,11 +130,21 @@ class RTDETRDetector:
                 image_metadata=metadata,
             )
 
+        # Select device: prioritize CUDA if available in current context (ZeroGPU or local GPU), else CPU
+        target_device = self.device
+        if target_device == "cpu":
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    target_device = 0
+            except Exception:
+                target_device = "cpu"
+
         results = self.model.predict(
             source=pil_img,
             conf=conf_thresh,
             iou=iou_thresh,
-            device=self.device,
+            device=target_device,
             verbose=False,
             imgsz=settings.IMAGE_SIZE,
         )
