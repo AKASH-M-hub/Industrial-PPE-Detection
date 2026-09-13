@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model Weights &amp; Artifact Specification - RT-DETR-L</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       EXECUTIVE 1-PAGE A4 SPECIFICATION SHEET
+       ============================================================ */
+    @page {
+      size: A4 portrait;
+      margin: 8mm 10mm 8mm 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      background: #090d16;
+      line-height: 1.4;
+      font-size: 8.5pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      min-height: 100vh;
+    }
+
+    /* Screen Top App Toolbar */
+    .screen-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #f8fafc;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .toolbar-text h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-pill {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .btn-print {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    /* Document Workspace */
+    .document-workspace {
+      padding: 24px 16px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* A4 Sheet Strict 1-Page Layout */
+    .a4-sheet {
+      width: 210mm;
+      min-height: 279mm;
+      max-height: 279mm;
+      max-width: 900px;
+      background: #ffffff;
+      padding: 32px 36px;
+      border-radius: 6px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .sheet-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    .sheet-footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 6px;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7.5pt;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Header Banner */
+    .memo-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border-left: 4px solid #38bdf8;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      margin-bottom: 2px;
+    }
+
+    .memo-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .memo-title {
+      font-size: 13pt;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #f8fafc;
+    }
+
+    .meta-badges {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      font-size: 8pt;
+    }
+
+    .badge-item {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .badge-label {
+      color: #94a3b8;
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: block;
+    }
+
+    .badge-val {
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1.5px solid #0284c7;
+      padding-bottom: 2px;
+      margin-top: 4px;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Link Rows & Cards */
+    .links-container {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .link-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 8pt;
+    }
+
+    .link-label {
+      min-width: 170px;
+      font-weight: 700;
+      color: #1e293b;
+      font-size: 8pt;
+    }
+
+    .link-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.8pt;
+      color: #0284c7;
+      text-decoration: underline;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .link-val:hover {
+      color: #0369a1;
+    }
+
+    /* Specifications Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.8pt;
+      margin: 2px 0;
+    }
+
+    th, td {
+      padding: 3px 6px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+      line-height: 1.35;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      font-size: 7pt;
+      letter-spacing: 0.4px;
+    }
+
+    td strong {
+      color: #0f172a;
+    }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      background: #e2e8f0;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 7.5pt;
+      color: #0f172a;
+    }
+
+    /* Code Blocks */
+    .code-block {
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 5px;
+      padding: 6px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      line-height: 1.4;
+      border: 1px solid #1e293b;
+      position: relative;
+    }
+
+    .code-header {
+      font-size: 7pt;
+      color: #94a3b8;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .code-comment {
+      color: #64748b;
+    }
+
+    .code-keyword {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .code-str {
+      color: #4ade80;
+    }
+
+    .code-fn {
+      color: #fcd34d;
+    }
+
+    .methods-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    /* ============================================================
+       PRINT MEDIA SPECIFICATION: STRICT 1-PAGE A4 OUTPUT
+       ============================================================ */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm 10mm 8mm 10mm;
+      }
+
+      html, body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 8pt !important;
+        line-height: 1.3 !important;
+      }
+
+      .screen-toolbar {
+        display: none !important;
+      }
+
+      .document-workspace {
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+
+      .a4-sheet {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 279mm !important;
+        max-height: 279mm !important;
+        min-height: unset !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      .sheet-body {
+        gap: 6px !important;
+      }
+
+      .link-val {
+        color: #0284c7 !important;
+        text-decoration: underline !important;
+      }
+
+      .sheet-footer {
+        padding-top: 4px !important;
+        margin-top: 4px !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Screen Top Bar -->
+  <header class="screen-toolbar">
+    <div class="toolbar-left">
+      <div class="toolbar-icon">&#128279;</div>
+      <div class="toolbar-text">
+        <h1>Model Weights Specification &bull; Artifact Verification Sheet</h1>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <div class="status-pill">Strict 1-Page A4 Verified</div>
+      <button class="btn-print" onclick="window.print()">
+        <span>Print / Save as PDF</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="document-workspace">
+
+    <article class="a4-sheet" id="spec-sheet">
+      <div class="sheet-body">
+
+        <!-- Header -->
+        <div class="memo-header">
+          <div class="memo-header-top">
+            <div class="memo-title">Model Weights &amp; Artifact Specification Sheet</div>
+          </div>
+          <div class="meta-badges">
+            <div class="badge-item">
+              <span class="badge-label">Architecture</span>
+              <span class="badge-val">RT-DETR-L (HGNetv2)</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">File Size</span>
+              <span class="badge-val">66.2 MB (66,226,557 B)</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Target Classes</span>
+              <span class="badge-val">hat, person, vest</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Access Policy</span>
+              <span class="badge-val">Public &bull; Ungated (No Auth)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Official Artifact & Remote Hub Endpoints -->
+        <h2>1. Direct Artifact &amp; Model Hub Endpoints</h2>
+        <div class="links-container">
+          <div class="link-row">
+            <span class="link-label">Direct Weights Download URL:</span>
+            <a class="link-val" href="https://huggingface.co/Akashhhhwqx/rtdetr-workplace-ppe-detection/resolve/main/rtdetr_ppe_best.pt" target="_blank">https://huggingface.co/Akashhhhwqx/rtdetr-workplace-ppe-detection/resolve/main/rtdetr_ppe_best.pt</a>
+          </div>
+          <div class="link-row">
+            <span class="link-label">Hugging Face Model Hub:</span>
+            <a class="link-val" href="https://huggingface.co/Akashhhhwqx/rtdetr-workplace-ppe-detection" target="_blank">https://huggingface.co/Akashhhhwqx/rtdetr-workplace-ppe-detection</a>
+          </div>
+          <div class="link-row">
+            <span class="link-label">Live ZeroGPU Backend Space:</span>
+            <a class="link-val" href="https://huggingface.co/spaces/Akashhhhwqx/ppe-safety-backend" target="_blank">https://huggingface.co/spaces/Akashhhhwqx/ppe-safety-backend</a>
+          </div>
+          <div class="link-row">
+            <span class="link-label">Production Web Application:</span>
+            <a class="link-val" href="https://industrial-ppe-detection.vercel.app/" target="_blank">https://industrial-ppe-detection.vercel.app/</a>
+          </div>
+        </div>
+
+        <!-- Section 2: Checkpoint & Technical Specifications -->
+        <h2>2. Model Architecture &amp; Checkpoint Specifications</h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 25%;">Parameter / Field</th>
+              <th style="width: 75%;">Technical Value &amp; Checkpoint Verification Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Weights File Name</strong></td>
+              <td><span class="code-pill">rtdetr_ppe_best.pt</span> (Trained PyTorch Model Checkpoint)</td>
+            </tr>
+            <tr>
+              <td><strong>Model Architecture</strong></td>
+              <td><strong>RT-DETR-L</strong> (Real-Time DEtection TRansformer Large with HGNetv2 backbone &amp; hybrid encoder)</td>
+            </tr>
+            <tr>
+              <td><strong>Exact Binary Size</strong></td>
+              <td><strong>66,226,557 bytes</strong> (63.16 MiB / 66.2 MB)</td>
+            </tr>
+            <tr>
+              <td><strong>SHA-256 Checksum</strong></td>
+              <td><span class="code-pill">2B2D69D0D05A17F2B64EF7F46C5F2BC0016DCB5A11B63B567F82F81F3F56713B</span></td>
+            </tr>
+            <tr>
+              <td><strong>Input Resolution &amp; Classes</strong></td>
+              <td>640&times;640 RGB pixels &bull; 3 target classes: <span class="code-pill">hat</span>, <span class="code-pill">person</span>, <span class="code-pill">vest</span></td>
+            </tr>
+            <tr>
+              <td><strong>Training Run Telemetry</strong></td>
+              <td>50 Epochs, AdamW optimizer, lr=0.0001, seed=42 &bull; NVIDIA Tesla T4 GPU (14.9 GB VRAM, 47.31 mins)</td>
+            </tr>
+            <tr>
+              <td><strong>Holdout Test Metrics</strong></td>
+              <td><strong>0.9603 mAP@50</strong> &bull; <strong>0.9679 Precision</strong> &bull; <strong>0.9778 Recall</strong> &bull; 0.7997 mAP@50-95 (Unified 0.45 cutoff)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Section 3: Step-by-Step Loading & Execution Instructions -->
+        <h2>3. Reviewer Verification &amp; Loading Instructions</h2>
+
+        <div class="methods-grid">
+          <!-- Method 1: CLI Download -->
+          <div class="code-block">
+            <div class="code-header">
+              <span>CLI: Direct Download via cURL</span>
+              <span>Terminal</span>
+            </div>
+            <span class="code-comment"># 1. Download weights into repo weights directory:</span><br>
+            curl -L -o weights/rtdetr_ppe_best.pt \<br>
+            &nbsp;&nbsp;<span class="code-str">"https://huggingface.co/Akashhhhwqx/rtdetr-workplace-ppe-detection/resolve/main/rtdetr_ppe_best.pt"</span>
+          </div>
+
+          <!-- Method 2: Ultralytics Python -->
+          <div class="code-block">
+            <div class="code-header">
+              <span>Python: Load with Ultralytics RT-DETR</span>
+              <span>Python SDK</span>
+            </div>
+            <span class="code-keyword">from</span> ultralytics <span class="code-keyword">import</span> RTDETR<br>
+            <span class="code-comment"># Option A: Load from local file</span><br>
+            model = <span class="code-fn">RTDETR</span>(<span class="code-str">"weights/rtdetr_ppe_best.pt"</span>)<br>
+            <span class="code-comment"># Option B: Direct load from remote URL</span><br>
+            model = <span class="code-fn">RTDETR</span>(<span class="code-str">"https://huggingface.co/Akashhhhwqx/rtdetr-workplace-ppe-detection/resolve/main/rtdetr_ppe_best.pt"</span>)
+          </div>
+        </div>
+
+        <div class="code-block" style="margin-top: 4px;">
+          <div class="code-header">
+            <span>Automated In-App Loading (src/detector/model.py)</span>
+            <span>Production API Pipeline</span>
+          </div>
+          <span class="code-comment"># The backend detector automatically detects if weights/ exists; if missing, it downloads directly from HF Hub:</span><br>
+          <span class="code-keyword">from</span> src.detector.model <span class="code-keyword">import</span> RTDETRDetector<br>
+          detector = <span class="code-fn">RTDETRDetector</span>()  <span class="code-comment"># Initializes detector, downloads if needed, &amp; warms up tensor engine</span><br>
+          results = detector.<span class="code-fn">predict</span>(image_bytes)  <span class="code-comment"># Enforces 0.45 confidence cutoff and outputs BoundingBoxes</span>
+        </div>
+
+      </div>
+
+      <footer class="sheet-footer">
+        <span>Industrial PPE Constrained Object Detection &bull; Model Weights &amp; Artifact Specification</span>
+        <span>Page 1 of 1</span>
+      </footer>
+    </article>
+
+  </main>
+
+</body>
+
+</html>
