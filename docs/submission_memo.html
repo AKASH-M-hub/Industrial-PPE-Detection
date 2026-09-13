@@ -592,6 +592,16 @@
         padding: 4px 6px !important;
       }
 
+      .deploy-banner {
+        padding: 4px 8px !important;
+        margin-top: 4px !important;
+      }
+
+      .deploy-banner a {
+        color: #0284c7 !important;
+        text-decoration: underline !important;
+      }
+
       .sheet-footer {
         padding-top: 4px !important;
         margin-top: 4px !important;
@@ -629,7 +639,6 @@
         <div class="memo-header">
           <div class="memo-header-top">
             <div class="memo-title">Technical Submission Memo: RT-DETR Vision &amp; Reasoning API</div>
-            <div class="memo-tag">ROUND 1 SCREENING</div>
           </div>
           <div class="meta-badges">
             <div class="badge-item">
@@ -653,7 +662,6 @@
 
         <h2>
           <span>1. Domain Selection &amp; Dataset Curation Strategy</span>
-          <span class="section-weight">15% Weight</span>
         </h2>
         <p>
           <strong>Why this Domain &amp; Dataset?</strong> Industrial workplace safety represents a high-stakes environment where automated PPE auditing (e.g., OSHA 1926.100 compliance) can prevent fatal accidents. Standard generic COCO models are insufficient as they only recognize <code>person</code> objects. I chose this domain to demonstrate the ability to enforce strict safety compliance by detecting specific non-COCO protective gear (<span class="pill-class pill-hat">hat</span> and <span class="pill-class pill-vest">vest</span>), moving beyond simple bounding boxes to actual semantic reasoning for safety verification.
@@ -689,7 +697,6 @@
 
         <h2>
           <span>2. Evaluation Methodology &amp; Metric Honesty</span>
-          <span class="section-weight">10% Weight</span>
         </h2>
         <p>
           Fine-tuned <strong>RT-DETR-L for 50 epochs (47.31 mins)</strong> on an <strong>NVIDIA Tesla T4 GPU (14.9 GB
@@ -805,7 +812,6 @@
       <div class="sheet-body">
         <h2>
           <span>3. Five Model Failure Cases &amp; Root-Cause Analysis</span>
-          <span class="section-weight">15% Weight</span>
         </h2>
 
         <table>
@@ -858,12 +864,11 @@
 
         <h2>
           <span>4. Part B: Minimal Reasoning Layer, Intent Routing, &amp; Guardrails</span>
-          <span class="section-weight">15% Weight</span>
         </h2>
         <p>
           <strong>Zero-Framework Architecture:</strong> In strict compliance with Constraint #1, absolutely no agentic
           frameworks (LangChain, LangGraph, CrewAI, AutoGen) are used. Implemented in <strong>pure Python with direct
-            Groq API calls (<code>llama-3.3-70b-versatile</code>)</strong>.
+          Groq API calls (<code>llama-3.3-70b-versatile</code>)</strong>.
         </p>
 
         <div class="pipeline-box">
@@ -895,26 +900,33 @@
         </div>
 
         <h2>
-          <span>5. Production Readiness, API, &amp; Bonus Implementation</span>
-          <span class="section-weight">10% Bonus</span>
+          <span>5. Production Readiness, API, &amp; Live Deployments</span>
         </h2>
 
         <div class="bonus-grid">
           <div class="bonus-card">
-            <div class="bonus-title">&#128230; Containerization</div>
+            <div class="bonus-title">Containerization</div>
             <div class="bonus-desc">Multi-stage <code>Dockerfile</code> &amp; <code>docker-compose.yml</code> with
               automatic healthchecks and CPU/CUDA runtime switching.</div>
           </div>
           <div class="bonus-card">
-            <div class="bonus-title">&#9889; FastAPI Endpoints</div>
+            <div class="bonus-title">FastAPI Endpoints</div>
             <div class="bonus-desc"><code>POST /api/v1/detect</code>, <code>POST /api/v1/reason</code>, and
               <code>GET /health</code> with Pydantic v2 schemas and <code>X-Process-Time-Ms</code> header.
             </div>
           </div>
           <div class="bonus-card">
-            <div class="bonus-title">&#128202; Structured Telemetry</div>
+            <div class="bonus-title">Structured Telemetry</div>
             <div class="bonus-desc">Loguru structured file rotation (50MB/10-day retention), request latency timing, and
               zero-login device-isolated inspection history.</div>
+          </div>
+        </div>
+
+        <div class="deploy-banner" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3px solid #16a34a; border-radius: 5px; padding: 6px 10px; margin-top: 6px;">
+          <div style="font-weight: 700; font-size: 8.5pt; color: #166534; margin-bottom: 2px;">Live Production Deployments:</div>
+          <div style="font-size: 8pt; display: flex; flex-direction: column; gap: 2px;">
+            <span><strong>Live Web Application:</strong> <a href="https://industrial-ppe-detection.vercel.app/" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600; font-family: 'JetBrains Mono', monospace;">https://industrial-ppe-detection.vercel.app/</a></span>
+            <span><strong>ZeroGPU Model Space:</strong> <a href="https://huggingface.co/spaces/Akashhhhwqx/ppe-safety-backend" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600; font-family: 'JetBrains Mono', monospace;">https://huggingface.co/spaces/Akashhhhwqx/ppe-safety-backend</a></span>
           </div>
         </div>
       </div>
