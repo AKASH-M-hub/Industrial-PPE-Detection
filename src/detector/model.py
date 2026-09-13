@@ -7,6 +7,19 @@ import numpy as np
 from PIL import Image
 from loguru import logger
 
+try:
+    import spaces
+except ImportError:
+    class _MockSpaces:
+        @staticmethod
+        def GPU(fn=None, duration=60):
+            if fn is not None:
+                return fn
+            def decorator(f):
+                return f
+            return decorator
+    spaces = _MockSpaces()
+
 from src.config import settings
 from src.detector.schemas import (
     BoundingBox,
