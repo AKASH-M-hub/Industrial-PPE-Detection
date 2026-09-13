@@ -163,6 +163,7 @@ class ReasoningEngine:
         question: str,
         image_bytes: bytes,
         detector: RTDETRDetector,
+        force_cpu: bool = False,
     ) -> ReasoningResponse:
         """Full reasoning execution pipeline."""
         start_time = time.perf_counter()
@@ -193,7 +194,7 @@ class ReasoningEngine:
             )
 
         # Visual query
-        detections = detector.predict(image_bytes)
+        detections = detector.predict(image_bytes, force_cpu=force_cpu)
 
         # 2. Guardrail validation
         guardrail_result = self.guardrail.evaluate(question, detections)

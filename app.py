@@ -47,7 +47,7 @@ def _to_pil_image(image):
     return None
 
 
-def _run_predict_pipeline(image):
+def _run_predict_pipeline(image, force_cpu=False):
     if image is None:
         return json.dumps({"error": "Please upload an image."})
     detector = get_detector()
@@ -56,11 +56,11 @@ def _run_predict_pipeline(image):
         return json.dumps({"error": "Invalid image payload."})
     buf = io.BytesIO()
     pil_img.save(buf, format="JPEG")
-    response = detector.predict(buf.getvalue())
+    response = detector.predict(buf.getvalue(), force_cpu=force_cpu)
     return response.model_dump_json()
 
 
-def _run_reason_pipeline(image, question):
+def _run_reason_pipeline(image, question, force_cpu=False):
     if image is None:
         return json.dumps({"error": "Please upload an image."})
     detector = get_detector()
@@ -73,7 +73,8 @@ def _run_reason_pipeline(image, question):
     reason_res = engine.reason(
         question=question or "Is everyone wearing required PPE?",
         image_bytes=buf.getvalue(),
-        detector=detector
+        detector=detector,
+        force_cpu=force_cpu,
     )
     return reason_res.model_dump_json()
 
@@ -82,16 +83,16 @@ def _run_reason_pipeline(image, question):
 def predict_ppe_gpu(image):
     """ZeroGPU inference function for RT-DETR returning full DetectionResponse JSON."""
     try:
-        return _run_predict_pipeline(image)
+        return _run_predict_pipeline(image, force_cpu=False)
     except Exception as e:
         logger.error(f"Inference error on GPU, fallback to CPU: {e}")
-        return _run_predict_pipeline(image)
+        return _run_predict_pipeline(image, force_cpu=True)
 
 
 def predict_ppe_cpu(image):
     """CPU fallback inference function with no ZeroGPU quota limits."""
     try:
-        return _run_predict_pipeline(image)
+        return _run_predict_pipeline(image, force_cpu=True)
     except Exception as e:
         logger.error(f"CPU Inference error: {e}")
         return json.dumps({"error": str(e)})
@@ -101,16 +102,16 @@ def predict_ppe_cpu(image):
 def reason_ppe_gpu(image, question):
     """ZeroGPU natural language reasoning function."""
     try:
-        return _run_reason_pipeline(image, question)
+        return _run_reason_pipeline(image, question, force_cpu=False)
     except Exception as e:
         logger.error(f"Reasoning error on GPU, fallback to CPU: {e}")
-        return _run_reason_pipeline(image, question)
+        return _run_reason_pipeline(image, question, force_cpu=True)
 
 
 def reason_ppe_cpu(image, question):
     """CPU fallback reasoning function with no ZeroGPU quota limits."""
     try:
-        return _run_reason_pipeline(image, question)
+        return _run_reason_pipeline(image, question, force_cpu=True)
     except Exception as e:
         logger.error(f"CPU Reasoning error: {e}")
         return json.dumps({"error": str(e)})

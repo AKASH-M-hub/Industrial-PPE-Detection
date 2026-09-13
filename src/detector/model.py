@@ -84,6 +84,7 @@ class RTDETRDetector:
         image_bytes: bytes,
         confidence_threshold: Optional[float] = None,
         iou_threshold: Optional[float] = None,
+        force_cpu: bool = False,
     ) -> DetectionResponse:
         conf_thresh = (
             confidence_threshold
@@ -130,9 +131,11 @@ class RTDETRDetector:
                 image_metadata=metadata,
             )
 
-        # Select device: prioritize CUDA if available in current context (ZeroGPU or local GPU), else CPU
-        target_device = self.device
-        if target_device == "cpu":
+        # Select device: if force_cpu is True or device is cpu, stay strictly on CPU to avoid ZeroGPU CUDA init triggers
+        if force_cpu or self.device == "cpu":
+            target_device = "cpu"
+        else:
+            target_device = "cpu"
             try:
                 import torch
                 if torch.cuda.is_available():
