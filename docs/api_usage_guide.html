@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Usage Instructions &amp; Endpoint Payloads</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       EXECUTIVE 2-PAGE A4 API USAGE SPECIFICATION
+       ============================================================ */
+    @page {
+      size: A4 portrait;
+      margin: 8mm 10mm 8mm 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #0f172a;
+      background: #090d16;
+      line-height: 1.35;
+      font-size: 8pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      min-height: 100vh;
+    }
+
+    /* Screen Top App Toolbar */
+    .screen-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #f8fafc;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .toolbar-text h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-pill {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-pill::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .btn-print {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9);
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    /* Workspace */
+    .document-workspace {
+      padding: 24px 16px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    /* A4 Sheet Strict 2-Page Layout */
+    .a4-sheet {
+      width: 210mm;
+      min-height: 279mm;
+      max-height: 279mm;
+      max-width: 900px;
+      background: #ffffff;
+      padding: 28px 32px;
+      border-radius: 6px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .sheet-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 6px;
+    }
+
+    .sheet-footer {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 5px;
+      margin-top: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7.5pt;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Header Banner */
+    .memo-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border-left: 4px solid #38bdf8;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+      margin-bottom: 2px;
+    }
+
+    .memo-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .memo-title {
+      font-size: 12.5pt;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #f8fafc;
+    }
+
+    .meta-badges {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      font-size: 7.8pt;
+    }
+
+    .badge-item {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .badge-label {
+      color: #94a3b8;
+      font-size: 6.8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: block;
+    }
+
+    .badge-val {
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1.5px solid #0284c7;
+      padding-bottom: 2px;
+      margin-top: 4px;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .endpoint-tag {
+      background: #0284c7;
+      color: #ffffff;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 7pt;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    .endpoint-tag.get {
+      background: #16a34a;
+    }
+
+    p {
+      font-size: 8pt;
+      color: #334155;
+      line-height: 1.35;
+      margin-bottom: 2px;
+    }
+
+    /* Code Blocks */
+    .code-box {
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 5px;
+      padding: 6px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.2pt;
+      line-height: 1.35;
+      border: 1px solid #1e293b;
+    }
+
+    .code-header {
+      font-size: 6.8pt;
+      color: #94a3b8;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 2px;
+    }
+
+    .code-comment { color: #64748b; }
+    .code-keyword { color: #38bdf8; font-weight: 600; }
+    .code-str { color: #4ade80; }
+    .code-num { color: #f59e0b; }
+    .code-key { color: #93c5fd; }
+    .code-bool { color: #ec4899; }
+
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    /* Deployment Links Box */
+    .links-strip {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-left: 3px solid #16a34a;
+      border-radius: 5px;
+      padding: 5px 8px;
+      font-size: 7.8pt;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .links-strip a {
+      color: #0284c7;
+      text-decoration: underline;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    /* Status Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.5pt;
+      margin: 2px 0;
+    }
+
+    th, td {
+      padding: 3px 6px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+      line-height: 1.3;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      font-size: 6.8pt;
+    }
+
+    .status-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .code-200 { background: #dcfce7; color: #15803d; }
+    .code-400 { background: #fee2e2; color: #b91c1c; }
+    .code-413 { background: #ffedd5; color: #c2410c; }
+    .code-422 { background: #fef3c7; color: #b45309; }
+
+    /* ============================================================
+       PRINT MEDIA SPECIFICATION: STRICT 2-PAGE A4 OUTPUT
+       ============================================================ */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm 10mm 8mm 10mm;
+      }
+
+      html, body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 7.8pt !important;
+        line-height: 1.3 !important;
+      }
+
+      .screen-toolbar {
+        display: none !important;
+      }
+
+      .document-workspace {
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+
+      .a4-sheet {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 279mm !important;
+        max-height: 279mm !important;
+        min-height: unset !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      .sheet-body {
+        gap: 5px !important;
+      }
+
+      a {
+        color: #0284c7 !important;
+        text-decoration: underline !important;
+      }
+
+      .sheet-footer {
+        padding-top: 3px !important;
+        margin-top: 3px !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Screen Top Bar -->
+  <header class="screen-toolbar">
+    <div class="toolbar-left">
+      <div class="toolbar-icon">&#128268;</div>
+      <div class="toolbar-text">
+        <h1>API Usage Instructions &bull; Request &amp; Response Payloads</h1>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <div class="status-pill">Strict 2-Page A4 Verified</div>
+      <button class="btn-print" onclick="window.print()">
+        <span>Print / Save as PDF</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="document-workspace">
+
+    <!-- ========================================================
+         PAGE 1: RUN INSTRUCTIONS & ENDPOINT 1 (/detect)
+         ======================================================== -->
+    <article class="a4-sheet" id="page-1">
+      <div class="sheet-body">
+
+        <!-- Header -->
+        <div class="memo-header">
+          <div class="memo-header-top">
+            <div class="memo-title">API Usage Instructions &amp; Endpoint Payloads</div>
+          </div>
+          <div class="meta-badges">
+            <div class="badge-item">
+              <span class="badge-label">Framework</span>
+              <span class="badge-val">FastAPI 0.115 + Pydantic v2</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Local Base URL</span>
+              <span class="badge-val">http://localhost:8000</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Live HF Space</span>
+              <span class="badge-val">ppe-safety-backend</span>
+            </div>
+            <div class="badge-item">
+              <span class="badge-label">Unified Cutoff</span>
+              <span class="badge-val">0.45 Confidence</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Run Instructions -->
+        <h2>
+          <span>1. How to Launch &amp; Access the Service</span>
+          <span class="endpoint-tag get">GET /health</span>
+        </h2>
+        <div class="two-col-grid">
+          <div class="code-box">
+            <div class="code-header">
+              <span>Local Run (Terminal)</span>
+              <span>FastAPI / Uvicorn</span>
+            </div>
+            <span class="code-comment"># 1. Install pure dependencies:</span><br>
+            pip install -r requirements.txt<br>
+            <span class="code-comment"># 2. Launch FastAPI with auto-reload:</span><br>
+            uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+          </div>
+          <div class="code-box">
+            <div class="code-header">
+              <span>Containerized Launch</span>
+              <span>Docker Compose</span>
+            </div>
+            <span class="code-comment"># 1. Launch with healthchecks:</span><br>
+            docker-compose up --build -d<br>
+            <span class="code-comment"># 2. Verify container health status:</span><br>
+            curl -s http://localhost:8000/health | jq .
+          </div>
+        </div>
+
+        <div class="links-strip">
+          <div><strong>Interactive API Documentation:</strong> <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a> (Swagger UI) &bull; <a href="http://localhost:8000/redoc" target="_blank">http://localhost:8000/redoc</a> (ReDoc)</div>
+          <div><strong>Live Deployed Space:</strong> <a href="https://huggingface.co/spaces/Akashhhhwqx/ppe-safety-backend" target="_blank">https://huggingface.co/spaces/Akashhhhwqx/ppe-safety-backend</a> | <strong>Live UI:</strong> <a href="https://industrial-ppe-detection.vercel.app/" target="_blank">https://industrial-ppe-detection.vercel.app/</a></div>
+        </div>
+
+        <!-- Section 2: Endpoint 1 (/detect) -->
+        <h2>
+          <span>2. Endpoint 1: POST /api/v1/detect (Part A: Detection)</span>
+          <span class="endpoint-tag">POST /detect</span>
+        </h2>
+        <p>
+          Executes fine-tuned <strong>RT-DETR-L</strong> object detection on uploaded construction site images. Filters predictions at the unified <strong>0.45 confidence cutoff</strong>, computes Laplacian focus blur, and outputs exact bounding box coordinates with per-class breakdowns (<code>person</code>, <code>hat</code>, <code>vest</code>).
+        </p>
+
+        <div class="two-col-grid">
+          <div class="code-box">
+            <div class="code-header">
+              <span>Request Format: cURL (Multipart)</span>
+              <span>Bash</span>
+            </div>
+            curl -X POST <span class="code-str">"http://localhost:8000/api/v1/detect"</span> \<br>
+            &nbsp;&nbsp;-H <span class="code-str">"accept: application/json"</span> \<br>
+            &nbsp;&nbsp;-H <span class="code-str">"Content-Type: multipart/form-data"</span> \<br>
+            &nbsp;&nbsp;-F <span class="code-str">"file=@site_worker.jpg;type=image/jpeg"</span>
+          </div>
+          <div class="code-box">
+            <div class="code-header">
+              <span>Request Format: Python Requests</span>
+              <span>Python 3.10+</span>
+            </div>
+            <span class="code-keyword">import</span> requests<br>
+            url = <span class="code-str">"http://localhost:8000/api/v1/detect"</span><br>
+            <span class="code-keyword">with</span> open(<span class="code-str">"site_worker.jpg"</span>, <span class="code-str">"rb"</span>) <span class="code-keyword">as</span> f:<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;files = {<span class="code-str">"file"</span>: (<span class="code-str">"site.jpg"</span>, f, <span class="code-str">"image/jpeg"</span>)}<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;res = requests.post(url, files=files).json()
+          </div>
+        </div>
+
+        <div class="code-box">
+          <div class="code-header">
+            <span>Sample Response Payload: 200 OK (Detection Successful)</span>
+            <span>JSON</span>
+          </div>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"status"</span>: <span class="code-str">"success"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"model_version"</span>: <span class="code-str">"RT-DETR-L-PPE-v1"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"inference_time_ms"</span>: <span class="code-num">28.45</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"total_detections"</span>: <span class="code-num">3</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"counts_by_class"</span>: { <span class="code-key">"person"</span>: <span class="code-num">1</span>, <span class="code-key">"vest"</span>: <span class="code-num">1</span>, <span class="code-key">"hat"</span>: <span class="code-num">1</span> },<br>
+&nbsp;&nbsp;<span class="code-key">"detections"</span>: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="code-key">"class_id"</span>: <span class="code-num">1</span>, <span class="code-key">"class_name"</span>: <span class="code-str">"person"</span>, <span class="code-key">"confidence"</span>: <span class="code-num">0.962</span>, <span class="code-key">"box"</span>: { <span class="code-key">"x1"</span>: <span class="code-num">142.1</span>, <span class="code-key">"y1"</span>: <span class="code-num">88.4</span>, <span class="code-key">"x2"</span>: <span class="code-num">320.6</span>, <span class="code-key">"y2"</span>: <span class="code-num">560.2</span>, <span class="code-key">"norm_x1"</span>: <span class="code-num">0.222</span>, <span class="code-key">"norm_y1"</span>: <span class="code-num">0.138</span>, <span class="code-key">"norm_x2"</span>: <span class="code-num">0.501</span>, <span class="code-key">"norm_y2"</span>: <span class="code-num">0.875</span>, <span class="code-key">"area"</span>: <span class="code-num">84224.0</span> } },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="code-key">"class_id"</span>: <span class="code-num">2</span>, <span class="code-key">"class_name"</span>: <span class="code-str">"vest"</span>, <span class="code-key">"confidence"</span>: <span class="code-num">0.914</span>, <span class="code-key">"box"</span>: { <span class="code-key">"x1"</span>: <span class="code-num">160.0</span>, <span class="code-key">"y1"</span>: <span class="code-num">180.2</span>, <span class="code-key">"x2"</span>: <span class="code-num">305.5</span>, <span class="code-key">"y2"</span>: <span class="code-num">380.0</span>, <span class="code-key">"norm_x1"</span>: <span class="code-num">0.250</span>, <span class="code-key">"norm_y1"</span>: <span class="code-num">0.282</span>, <span class="code-key">"norm_x2"</span>: <span class="code-num">0.477</span>, <span class="code-key">"norm_y2"</span>: <span class="code-num">0.594</span>, <span class="code-key">"area"</span>: <span class="code-num">29071.0</span> } },<br>
+&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="code-key">"class_id"</span>: <span class="code-num">0</span>, <span class="code-key">"class_name"</span>: <span class="code-str">"hat"</span>, <span class="code-key">"confidence"</span>: <span class="code-num">0.887</span>, <span class="code-key">"box"</span>: { <span class="code-key">"x1"</span>: <span class="code-num">185.0</span>, <span class="code-key">"y1"</span>: <span class="code-num">88.4</span>, <span class="code-key">"x2"</span>: <span class="code-num">270.2</span>, <span class="code-key">"y2"</span>: <span class="code-num">162.0</span>, <span class="code-key">"norm_x1"</span>: <span class="code-num">0.289</span>, <span class="code-key">"norm_y1"</span>: <span class="code-num">0.138</span>, <span class="code-key">"norm_x2"</span>: <span class="code-num">0.422</span>, <span class="code-key">"norm_y2"</span>: <span class="code-num">0.253</span>, <span class="code-key">"area"</span>: <span class="code-num">6270.7</span> } }<br>
+&nbsp;&nbsp;],<br>
+&nbsp;&nbsp;<span class="code-key">"image_metadata"</span>: { <span class="code-key">"width"</span>: <span class="code-num">640</span>, <span class="code-key">"height"</span>: <span class="code-num">640</span>, <span class="code-key">"channels"</span>: <span class="code-num">3</span>, <span class="code-key">"blur_laplacian_variance"</span>: <span class="code-num">192.4</span>, <span class="code-key">"is_severely_blurred"</span>: <span class="code-bool">false</span> }<br>
+}
+        </div>
+
+      </div>
+
+      <footer class="sheet-footer">
+        <span>FastAPI PPE Safety Vision &amp; Reasoning &bull; Endpoint Specification</span>
+        <span>Page 1 of 2</span>
+      </footer>
+    </article>
+
+    <!-- ========================================================
+         PAGE 2: ENDPOINT 2 (/reason) & HTTP STATUS PROTOCOLS
+         ======================================================== -->
+    <article class="a4-sheet" id="page-2">
+      <div class="sheet-body">
+
+        <!-- Section 3: Endpoint 2 (/reason) -->
+        <h2>
+          <span>3. Endpoint 2: POST /api/v1/reason (Part B: Minimal Reasoning Layer)</span>
+          <span class="endpoint-tag">POST /reason</span>
+        </h2>
+        <p>
+          Hand-written reasoning pipeline (<strong>strictly zero agentic frameworks</strong>): <strong>[1] Intent Router</strong> classifies token necessity &rarr; <strong>[2] RT-DETR</strong> executes object detection if visual &rarr; <strong>[3] Confidence Guardrail</strong> validates sharpness &amp; confidence cutoff &rarr; <strong>[4] Native Groq SDK</strong> (<code>llama-3.3-70b-versatile</code>) generates plain English compliance audit.
+        </p>
+
+        <!-- Scenario A: Visual Safety Question -->
+        <div class="code-box">
+          <div class="code-header">
+            <span>Scenario A: Visual Safety Question (Compliant Detection &amp; Audit Response)</span>
+            <span>200 OK</span>
+          </div>
+          <span class="code-comment"># cURL Request:</span><br>
+          curl -X POST <span class="code-str">"http://localhost:8000/api/v1/reason"</span> -F <span class="code-str">"file=@site.jpg"</span> -F <span class="code-str">"question=Is the worker compliant with helmet and vest safety rules?"</span><br>
+          <span class="code-comment"># JSON Response:</span><br>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"status"</span>: <span class="code-str">"success"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"question"</span>: <span class="code-str">"Is the worker compliant with helmet and vest safety rules?"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"intent_routing"</span>: { <span class="code-key">"needs_detection"</span>: <span class="code-bool">true</span>, <span class="code-key">"intent_category"</span>: <span class="code-str">"visual_inspection"</span>, <span class="code-key">"confidence"</span>: <span class="code-num">0.98</span>, <span class="code-key">"matched_pattern"</span>: <span class="code-str">"\\bhelmet\\b|\\bvest\\b"</span> },<br>
+&nbsp;&nbsp;<span class="code-key">"detector_called"</span>: <span class="code-bool">true</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"guardrail_result"</span>: { <span class="code-key">"is_sufficient"</span>: <span class="code-bool">true</span>, <span class="code-key">"laplacian_variance"</span>: <span class="code-num">192.4</span>, <span class="code-key">"message"</span>: <span class="code-str">"Sufficient information: Sharpness and confidence exceed thresholds."</span> },<br>
+&nbsp;&nbsp;<span class="code-key">"answer"</span>: <span class="code-str">"Yes, full PPE compliance is verified. One worker is detected with both a hard hat (confidence: 0.89) and a high-visibility safety vest (confidence: 0.91). No violations observed under OSHA 1926.100."</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"model_used"</span>: <span class="code-str">"llama-3.3-70b-versatile"</span>, <span class="code-key">"total_latency_ms"</span>: <span class="code-num">294.6</span><br>
+}
+        </div>
+
+        <!-- Scenario B: Insufficient Information Guardrail Trigger -->
+        <div class="code-box">
+          <div class="code-header">
+            <span>Scenario B: Degraded / Blur Trigger (Explicit "insufficient_information" Output)</span>
+            <span>200 OK &bull; Guardrail Refusal</span>
+          </div>
+          <span class="code-comment"># cURL: Degraded rainy/blurry image (&sigma;² = 24.3 &lt; 60.0 threshold)</span><br>
+          curl -X POST <span class="code-str">"http://localhost:8000/api/v1/reason"</span> -F <span class="code-str">"file=@foggy_blur.jpg"</span> -F <span class="code-str">"question=Is the worker wearing a helmet?"</span><br>
+          <span class="code-comment"># JSON Response (Explicit Refusal — Model Refuses to Hallucinate):</span><br>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"status"</span>: <span class="code-str">"insufficient_information"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"question"</span>: <span class="code-str">"Is the worker wearing a helmet?"</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"intent_routing"</span>: { <span class="code-key">"needs_detection"</span>: <span class="code-bool">true</span>, <span class="code-key">"intent_category"</span>: <span class="code-str">"visual_inspection"</span> },<br>
+&nbsp;&nbsp;<span class="code-key">"detector_called"</span>: <span class="code-bool">true</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"guardrail_result"</span>: { <span class="code-key">"is_sufficient"</span>: <span class="code-bool">false</span>, <span class="code-key">"laplacian_variance"</span>: <span class="code-num">24.3</span>, <span class="code-key">"threshold"</span>: <span class="code-num">60.0</span>, <span class="code-key">"failure_mode"</span>: <span class="code-str">"severe_blur"</span> },<br>
+&nbsp;&nbsp;<span class="code-key">"answer"</span>: <span class="code-str">"Insufficient information: Image resolution or focus is too degraded (Laplacian sharpness variance: 24.3 &lt; 60.0) to reliably verify PPE safety compliance."</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"model_used"</span>: <span class="code-str">"confidence_guardrail_layer"</span>, <span class="code-key">"total_latency_ms"</span>: <span class="code-num">36.2</span><br>
+}
+        </div>
+
+        <!-- Scenario C: Non-Visual Bypass -->
+        <div class="code-box">
+          <div class="code-header">
+            <span>Scenario C: Non-Visual OSHA Query (Detector Bypassed — Saves 41ms GPU Latency)</span>
+            <span>200 OK &bull; Direct LLM</span>
+          </div>
+          <span class="code-comment"># cURL: General safety regulation query:</span><br>
+          curl -X POST <span class="code-str">"http://localhost:8000/api/v1/reason"</span> -F <span class="code-str">"file=@site.jpg"</span> -F <span class="code-str">"question=What is OSHA regulation 1926.100?"</span><br>
+          <span class="code-comment"># JSON Response (detector_called=false):</span><br>
+{<br>
+&nbsp;&nbsp;<span class="code-key">"status"</span>: <span class="code-str">"success"</span>, <span class="code-key">"intent_routing"</span>: { <span class="code-key">"needs_detection"</span>: <span class="code-bool">false</span>, <span class="code-key">"intent_category"</span>: <span class="code-str">"general_safety_knowledge"</span> },<br>
+&nbsp;&nbsp;<span class="code-key">"detector_called"</span>: <span class="code-bool">false</span>, <span class="code-key">"guardrail_result"</span>: <span class="code-key">null</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"answer"</span>: <span class="code-str">"OSHA Standard 1926.100 mandates that employees working in areas where there is possible danger of head injury from impact, falling objects, or electrical shocks must be protected by protective helmets."</span>,<br>
+&nbsp;&nbsp;<span class="code-key">"model_used"</span>: <span class="code-str">"llama-3.3-70b-versatile"</span>, <span class="code-key">"total_latency_ms"</span>: <span class="code-num">178.4</span><br>
+}
+        </div>
+
+        <!-- Section 4: HTTP Status Codes & Error Protocol -->
+        <h2>
+          <span>4. HTTP Status Codes &amp; Exception Handling</span>
+          <span class="endpoint-tag">Pydantic v2</span>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 15%;">Status Code</th>
+              <th style="width: 25%;">Condition</th>
+              <th style="width: 60%;">API Behavior &amp; Error Payload</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="status-code code-200">200 OK</span></td>
+              <td>Valid Request</td>
+              <td>Returns structured JSON with detection bounding boxes or LLM reasoning.</td>
+            </tr>
+            <tr>
+              <td><span class="status-code code-400">400 Bad Request</span></td>
+              <td>Invalid Extension / Empty File</td>
+              <td><code>{"detail": "Unsupported file extension. Allowed: ['.jpg', '.png', '.webp']"}</code></td>
+            </tr>
+            <tr>
+              <td><span class="status-code code-413">413 Too Large</span></td>
+              <td>Payload &gt; 15 MB</td>
+              <td><code>{"detail": "Uploaded image exceeds 15 MB limit."}</code></td>
+            </tr>
+            <tr>
+              <td><span class="status-code code-422">422 Unprocessable</span></td>
+              <td>Corrupt Image Header</td>
+              <td><code>{"detail": "Failed to decode image: image file is truncated or corrupt."}</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+
+      <footer class="sheet-footer">
+        <span>FastAPI PPE Safety Vision &amp; Reasoning &bull; Endpoint Specification</span>
+        <span>Page 2 of 2</span>
+      </footer>
+    </article>
+
+  </main>
+
+</body>
+
+</html>
