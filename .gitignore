@@ -45,9 +45,8 @@ data/
 runs/
 *.log
 
-# IDE & OS
-.idea/
-.vscode/
-*.swp
-.DS_Store
-Thumbs.db
+# Deliverables & Large Assets
+Deliverables/
+docs/demo_images/
+scripts/embed_demo_images.py
+
