@@ -1,13 +1,3 @@
----
-title: PPE Safety Vision & Reasoning API
-emoji: 🦺
-colorFrom: blue
-colorTo: green
-sdk: gradio
-app_file: app.py
-pinned: false
-license: mit
----
 
 <div align="center">
 
@@ -72,46 +62,7 @@ Evaluated at the unified **`0.45`** confidence threshold on the **sequestered si
 
 ---
 
-## 🏗️ System Architecture & Data Flow
-
-```
-                                      [ Natural Language Query & Uploaded Image ]
-                                                          │
-                                         ┌────────────────┴────────────────┐
-                                         ▼                                 ▼
-                                  [ Input Sanitization ]          [ Regex Intent Router ]
-                                (MIME Magic Bytes, Max 15MB)      (Inspect Semantics: \bworker\b, etc.)
-                                         │                                 │
-                                         │                 ┌───────────────┴───────────────┐
-                                         │                 │ (Non-Visual Query)            │ (Visual Query)
-                                         │                 ▼                               │
-                                         │       [ Direct Groq LLM ]                       │
-                                         │       (OSHA Regulations, Chit-chat)             │
-                                         │                 │                               │
-                                         │          Plain English                          │
-                                         │             Answer                              │
-                                         │                                                 ▼
-                                         └────────────────────────────────────────► [ RT-DETR-L Inference ]
-                                                                                   (Unified Cutoff >= 0.45)
-                                                                                           │
-                                                                                           ▼
-                                                                               [ Confidence & Physics Guardrail ]
-                                                                               (Laplacian Sharpness: Var > 60.0)
-                                                                                           │
-                                                                            ┌──────────────┴──────────────┐
-                                                                            │ (Degraded / Sub-threshold)  │ (Verified Objects)
-                                                                            ▼                             ▼
-                                                                 "Insufficient Information"      [ Spatial Parser Engine ]
-                                                                      Deterministic Refusal      (Worker-to-Gear Coordinates)
-                                                                     (0.00 ms LLM execution)              │
-                                                                                                          ▼
-                                                                                                 [ Groq LLaMA-3.3-70B ]
-                                                                                                 (Zero Framework Prompt)
-                                                                                                          │
-                                                                                                          ▼
-                                                                                                  Auditable Compliance
-                                                                                                     Verdict Output
-```
+<img width="1672" height="941" alt="Architecture Diagram" src="https://github.com/user-attachments/assets/3aa086d7-a4b9-4a74-b688-11b1a0d55ebe" />
 
 ---
 
