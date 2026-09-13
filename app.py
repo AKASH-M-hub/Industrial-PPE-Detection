@@ -1,11 +1,11 @@
 import os
 import io
 import time
-import gradio as gr
+import json
+import numpy as np
 from PIL import Image
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
+import gradio as gr
 
 # ZeroGPU Compatibility Layer
 try:
@@ -24,51 +24,90 @@ except ImportError:
 from src.api.routes import router as api_router
 from src.config import settings
 from src.detector.model import get_detector
+from src.reasoning.engine import get_reasoning_engine
+
+
+def _to_pil_image(image):
+    if image is None:
+        return None
+    if isinstance(image, np.ndarray):
+        return Image.fromarray(image)
+    if isinstance(image, Image.Image):
+        return image
+    if isinstance(image, str):
+        return Image.open(image)
+    if isinstance(image, bytes):
+        return Image.open(io.BytesIO(image))
+    return None
 
 
 @spaces.GPU(duration=60)
 def predict_ppe_gpu(image):
-    """ZeroGPU inference function for RT-DETR."""
+    """ZeroGPU inference function for RT-DETR returning full DetectionResponse JSON."""
     if image is None:
-        return "Please upload an image."
+        return json.dumps({"error": "Please upload an image."})
     try:
         detector = get_detector()
-        pil_img = Image.fromarray(image)
+        pil_img = _to_pil_image(image)
+        if pil_img is None:
+            return json.dumps({"error": "Invalid image payload."})
         buf = io.BytesIO()
         pil_img.save(buf, format="JPEG")
         response = detector.predict(buf.getvalue())
-        counts = response.counts_by_class
-        return (
-            f"✅ Detections: {response.total_detections} total\n"
-            f"• Workers (person): {counts.get('person', 0)}\n"
-            f"• Helmets (hat): {counts.get('hat', 0)}\n"
-            f"• Safety Vests (vest): {counts.get('vest', 0)}\n"
-            f"• Image Sharpness: {response.image_metadata.blur_laplacian_variance:.1f}"
-        )
+        return response.model_dump_json()
     except Exception as e:
-        return f"Error during inference: {e}"
+        logger.error(f"Inference error: {e}")
+        return json.dumps({"error": str(e)})
 
 
-# Build Gradio Interface
+@spaces.GPU(duration=60)
+def reason_ppe_gpu(image, question):
+    """ZeroGPU natural language reasoning function."""
+    if image is None:
+        return json.dumps({"error": "Please upload an image."})
+    try:
+        detector = get_detector()
+        pil_img = _to_pil_image(image)
+        if pil_img is None:
+            return json.dumps({"error": "Invalid image payload."})
+        buf = io.BytesIO()
+        pil_img.save(buf, format="JPEG")
+        det_response = detector.predict(buf.getvalue())
+
+        engine = get_reasoning_engine()
+        reason_res = engine.reason(
+            question=question or "Is everyone wearing required PPE?",
+            detection_data=det_response.model_dump(),
+            image_metadata=det_response.image_metadata.model_dump()
+        )
+        return reason_res.model_dump_json()
+    except Exception as e:
+        logger.error(f"Reasoning error: {e}")
+        return json.dumps({"error": str(e)})
+
+
+# Build Gradio Interface with named API endpoints
 with gr.Blocks(title="PPE Safety Vision & Reasoning Console") as demo:
     gr.Markdown(
         """
         # 🦺 Industrial PPE Safety Vision & Reasoning API
         ### ZeroGPU Accelerated Backend
         
-        - **Swagger API Docs**: [Open `/docs`](/docs)
-        - **Health Status**: [Check `/health`](/health)
         - **Frontend App**: Connect with your Vercel deployment!
         """
     )
     with gr.Row():
         with gr.Column():
             input_img = gr.Image(type="numpy", label="Upload Inspection Image")
+            question_input = gr.Textbox(label="Question", value="Is he wearing helmet or not?")
             run_btn = gr.Button("Run PPE Detection (GPU)", variant="primary")
+            reason_btn = gr.Button("Run Safety Reasoning (GPU)", variant="secondary")
         with gr.Column():
-            output_result = gr.Textbox(label="Detection Results", lines=6)
+            output_result = gr.Textbox(label="Detection Results (JSON)", lines=6)
+            reason_result = gr.Textbox(label="Reasoning Results (JSON)", lines=6)
 
-    run_btn.click(fn=predict_ppe_gpu, inputs=input_img, outputs=output_result)
+    run_btn.click(fn=predict_ppe_gpu, inputs=input_img, outputs=output_result, api_name="predict")
+    reason_btn.click(fn=reason_ppe_gpu, inputs=[input_img, question_input], outputs=reason_result, api_name="reason")
 
 
 if __name__ == "__main__":
