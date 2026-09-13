@@ -48,5 +48,8 @@ runs/
 # Deliverables & Large Assets
 Deliverables/
 docs/demo_images/
+docs/rendered_pages/
 scripts/embed_demo_images.py
+scratch/
+
 
