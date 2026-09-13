@@ -41,46 +41,72 @@ def _to_pil_image(image):
     return None
 
 
+def _run_predict_pipeline(image):
+    if image is None:
+        return json.dumps({"error": "Please upload an image."})
+    detector = get_detector()
+    pil_img = _to_pil_image(image)
+    if pil_img is None:
+        return json.dumps({"error": "Invalid image payload."})
+    buf = io.BytesIO()
+    pil_img.save(buf, format="JPEG")
+    response = detector.predict(buf.getvalue())
+    return response.model_dump_json()
+
+
+def _run_reason_pipeline(image, question):
+    if image is None:
+        return json.dumps({"error": "Please upload an image."})
+    detector = get_detector()
+    pil_img = _to_pil_image(image)
+    if pil_img is None:
+        return json.dumps({"error": "Invalid image payload."})
+    buf = io.BytesIO()
+    pil_img.save(buf, format="JPEG")
+    engine = get_reasoning_engine()
+    reason_res = engine.reason(
+        question=question or "Is everyone wearing required PPE?",
+        image_bytes=buf.getvalue(),
+        detector=detector
+    )
+    return reason_res.model_dump_json()
+
+
 @spaces.GPU(duration=60)
 def predict_ppe_gpu(image):
     """ZeroGPU inference function for RT-DETR returning full DetectionResponse JSON."""
-    if image is None:
-        return json.dumps({"error": "Please upload an image."})
     try:
-        detector = get_detector()
-        pil_img = _to_pil_image(image)
-        if pil_img is None:
-            return json.dumps({"error": "Invalid image payload."})
-        buf = io.BytesIO()
-        pil_img.save(buf, format="JPEG")
-        response = detector.predict(buf.getvalue())
-        return response.model_dump_json()
+        return _run_predict_pipeline(image)
     except Exception as e:
-        logger.error(f"Inference error: {e}")
+        logger.error(f"Inference error on GPU, fallback to CPU: {e}")
+        return _run_predict_pipeline(image)
+
+
+def predict_ppe_cpu(image):
+    """CPU fallback inference function with no ZeroGPU quota limits."""
+    try:
+        return _run_predict_pipeline(image)
+    except Exception as e:
+        logger.error(f"CPU Inference error: {e}")
         return json.dumps({"error": str(e)})
 
 
 @spaces.GPU(duration=60)
 def reason_ppe_gpu(image, question):
     """ZeroGPU natural language reasoning function."""
-    if image is None:
-        return json.dumps({"error": "Please upload an image."})
     try:
-        detector = get_detector()
-        pil_img = _to_pil_image(image)
-        if pil_img is None:
-            return json.dumps({"error": "Invalid image payload."})
-        buf = io.BytesIO()
-        pil_img.save(buf, format="JPEG")
-        engine = get_reasoning_engine()
-        reason_res = engine.reason(
-            question=question or "Is everyone wearing required PPE?",
-            image_bytes=buf.getvalue(),
-            detector=detector
-        )
-        return reason_res.model_dump_json()
+        return _run_reason_pipeline(image, question)
     except Exception as e:
-        logger.error(f"Reasoning error: {e}")
+        logger.error(f"Reasoning error on GPU, fallback to CPU: {e}")
+        return _run_reason_pipeline(image, question)
+
+
+def reason_ppe_cpu(image, question):
+    """CPU fallback reasoning function with no ZeroGPU quota limits."""
+    try:
+        return _run_reason_pipeline(image, question)
+    except Exception as e:
+        logger.error(f"CPU Reasoning error: {e}")
         return json.dumps({"error": str(e)})
 
 
@@ -89,7 +115,7 @@ with gr.Blocks(title="PPE Safety Vision & Reasoning Console") as demo:
     gr.Markdown(
         """
         # 🦺 Industrial PPE Safety Vision & Reasoning API
-        ### ZeroGPU Accelerated Backend
+        ### ZeroGPU Accelerated Backend with Automatic CPU Fallback
         
         - **Frontend App**: Connect with your Vercel deployment!
         """
@@ -100,12 +126,16 @@ with gr.Blocks(title="PPE Safety Vision & Reasoning Console") as demo:
             question_input = gr.Textbox(label="Question", value="Is he wearing helmet or not?")
             run_btn = gr.Button("Run PPE Detection (GPU)", variant="primary")
             reason_btn = gr.Button("Run Safety Reasoning (GPU)", variant="secondary")
+            cpu_detect_btn = gr.Button("Run PPE Detection (CPU Fallback)", visible=False)
+            cpu_reason_btn = gr.Button("Run Safety Reasoning (CPU Fallback)", visible=False)
         with gr.Column():
             output_result = gr.Textbox(label="Detection Results (JSON)", lines=6)
             reason_result = gr.Textbox(label="Reasoning Results (JSON)", lines=6)
 
     run_btn.click(fn=predict_ppe_gpu, inputs=input_img, outputs=output_result, api_name="predict")
     reason_btn.click(fn=reason_ppe_gpu, inputs=[input_img, question_input], outputs=reason_result, api_name="reason")
+    cpu_detect_btn.click(fn=predict_ppe_cpu, inputs=input_img, outputs=output_result, api_name="predict_cpu")
+    cpu_reason_btn.click(fn=reason_ppe_cpu, inputs=[input_img, question_input], outputs=reason_result, api_name="reason_cpu")
 
 
 if __name__ == "__main__":

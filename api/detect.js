@@ -8,8 +8,69 @@ export const config = {
 
 const HF_SPACE_URL = 'https://akashhhhwqx-ppe-safety-backend.hf.space';
 
+async function executeGradioTask(endpoint, filePath) {
+  const callHeaders = { 'Content-Type': 'application/json' };
+  if (process.env.HF_TOKEN) {
+    callHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
+  }
+
+  const callRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/${endpoint}`, {
+    method: 'POST',
+    headers: callHeaders,
+    body: JSON.stringify({
+      data: [{ path: filePath, meta: { _type: 'gradio.FileData' } }]
+    }),
+  });
+
+  if (!callRes.ok) {
+    return { success: false, error: `Queue status ${callRes.status}` };
+  }
+
+  const { event_id } = await callRes.json();
+  if (!event_id) {
+    return { success: false, error: 'No event_id returned' };
+  }
+
+  const streamHeaders = {};
+  if (process.env.HF_TOKEN) {
+    streamHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
+  }
+
+  const streamRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/${endpoint}/${event_id}`, {
+    headers: streamHeaders
+  });
+
+  if (!streamRes.ok) {
+    return { success: false, error: `Stream status ${streamRes.status}` };
+  }
+
+  const sseText = await streamRes.text();
+  const lines = sseText.split('\n');
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      try {
+        const raw = JSON.parse(line.slice(6));
+        if (Array.isArray(raw)) {
+          const resultObj = typeof raw[0] === 'string' ? JSON.parse(raw[0]) : raw[0];
+          if (resultObj && !resultObj.error) {
+            return { success: true, data: resultObj };
+          }
+          if (resultObj && resultObj.error) {
+            return { success: false, error: resultObj.error };
+          }
+        } else if (raw && raw.error) {
+          const isQuota = String(raw.error).toLowerCase().includes('quota') || String(raw.error).toLowerCase().includes('limit');
+          return { success: false, is_quota: isQuota, error: raw.error };
+        }
+      } catch (pe) {}
+    }
+  }
+
+  return { success: false, error: 'Empty result from stream', raw: sseText };
+}
+
 export default async function handler(req, res) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', '*');
@@ -23,7 +84,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Extract image buffer from request body
     let imgBuffer = null;
 
     if (req.body && typeof req.body === 'object') {
@@ -51,7 +111,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No image data provided in request.' });
     }
 
-    // 2. Upload file to Hugging Face Gradio endpoint
+    // 1. Upload to Gradio
     const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
     const header = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="files"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`);
     const footer = Buffer.from(`\r\n--${boundary}--\r\n`);
@@ -83,67 +143,22 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Gradio upload returned empty file path' });
     }
 
-    // 3. Initiate prediction queue task
-    const callHeaders = { 'Content-Type': 'application/json' };
-    if (process.env.HF_TOKEN) {
-      callHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
+    // 2. Try ZeroGPU first
+    let result = await executeGradioTask('predict', filePath);
+
+    // 3. If ZeroGPU quota is exceeded or GPU fails, fallback to CPU
+    if (!result.success) {
+      console.warn(`ZeroGPU predict notice: ${result.error}. Attempting CPU fallback...`);
+      result = await executeGradioTask('predict_cpu', filePath);
     }
 
-    const callRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/predict`, {
-      method: 'POST',
-      headers: callHeaders,
-      body: JSON.stringify({
-        data: [{ path: filePath, meta: { _type: 'gradio.FileData' } }]
-      }),
+    if (result.success && result.data) {
+      return res.status(200).json(result.data);
+    }
+
+    return res.status(502).json({
+      error: `Detection failed on both GPU and CPU: ${result.error || 'Unknown error'}`
     });
-
-    if (!callRes.ok) {
-      const callErr = await callRes.text().catch(() => '');
-      return res.status(callRes.status).json({
-        error: `Gradio call failed (${callRes.status}): ${callErr.slice(0, 150)}`
-      });
-    }
-
-    const { event_id } = await callRes.json();
-    if (!event_id) {
-      return res.status(502).json({ error: 'Gradio call returned no event_id' });
-    }
-
-    // 4. Read result from SSE stream
-    const streamHeaders = {};
-    if (process.env.HF_TOKEN) {
-      streamHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
-    }
-
-    const streamRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/predict/${event_id}`, {
-      headers: streamHeaders
-    });
-
-    if (!streamRes.ok) {
-      const streamErr = await streamRes.text().catch(() => '');
-      return res.status(streamRes.status).json({
-        error: `Gradio stream failed (${streamRes.status}): ${streamErr.slice(0, 150)}`
-      });
-    }
-
-    const sseText = await streamRes.text();
-    const lines = sseText.split('\n');
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const raw = JSON.parse(line.slice(6));
-          const resultObj = typeof raw[0] === 'string' ? JSON.parse(raw[0]) : raw[0];
-          if (resultObj) {
-            return res.status(200).json(resultObj);
-          }
-        } catch (parseErr) {
-          // continue checking other lines
-        }
-      }
-    }
-
-    return res.status(200).json({ raw_sse: sseText });
   } catch (err) {
     return res.status(500).json({
       error: `Detection proxy error: ${err.message || 'Internal error'}`

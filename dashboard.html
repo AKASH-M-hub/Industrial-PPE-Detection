@@ -988,22 +988,9 @@
       ctx.drawImage(img, 0, 0);
     }
 
-    async function callGradioDirect(endpoint, file, question) {
+    async function _runSingleGradioCall(endpoint, filePath, question) {
       const hfBase = "https://akashhhhwqx-ppe-safety-backend.hf.space";
-      const fd = new FormData();
-      fd.append("files", file, "image.jpg");
-      const upRes = await fetch(`${hfBase}/gradio_api/upload`, {
-        method: "POST",
-        body: fd
-      });
-      if (!upRes.ok) {
-        throw new Error(`Gradio upload HTTP ${upRes.status}`);
-      }
-      const files = await upRes.json();
-      const filePath = files && files[0];
-      if (!filePath) throw new Error("No file path returned from upload");
-
-      const callData = endpoint === "predict"
+      const callData = endpoint.startsWith("predict")
         ? [{ path: filePath, meta: { _type: "gradio.FileData" } }]
         : [{ path: filePath, meta: { _type: "gradio.FileData" } }, question || "Is everyone wearing required PPE?"];
 
@@ -1012,24 +999,26 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ data: callData })
       });
-      if (!callRes.ok) {
-        throw new Error(`Gradio queue HTTP ${callRes.status}`);
-      }
+      if (!callRes.ok) throw new Error(`Queue HTTP ${callRes.status}`);
+
       const { event_id } = await callRes.json();
       if (!event_id) throw new Error("No event_id returned");
 
       const streamRes = await fetch(`${hfBase}/gradio_api/call/${endpoint}/${event_id}`);
-      if (!streamRes.ok) {
-        throw new Error(`Gradio stream HTTP ${streamRes.status}`);
-      }
+      if (!streamRes.ok) throw new Error(`Stream HTTP ${streamRes.status}`);
+
       const sseText = await streamRes.text();
       for (const line of sseText.split("\n")) {
         if (line.startsWith("data: ")) {
           try {
             const raw = JSON.parse(line.slice(6));
-            const obj = typeof raw[0] === "string" ? JSON.parse(raw[0]) : raw[0];
-            if (obj && !obj.error) return obj;
-            if (obj && obj.error) throw new Error(obj.error);
+            if (Array.isArray(raw)) {
+              const obj = typeof raw[0] === "string" ? JSON.parse(raw[0]) : raw[0];
+              if (obj && !obj.error) return obj;
+              if (obj && obj.error) throw new Error(obj.error);
+            } else if (raw && raw.error) {
+              throw new Error(raw.error);
+            }
           } catch (pe) {
             if (pe.message && !pe.message.includes("JSON")) throw pe;
           }
@@ -1038,23 +1027,48 @@
       throw new Error("Empty SSE result from ZeroGPU");
     }
 
+    async function callGradioDirect(endpoint, file, question) {
+      const hfBase = "https://akashhhhwqx-ppe-safety-backend.hf.space";
+      const fd = new FormData();
+      fd.append("files", file, "image.jpg");
+      const upRes = await fetch(`${hfBase}/gradio_api/upload`, {
+        method: "POST",
+        body: fd
+      });
+      if (!upRes.ok) throw new Error(`Gradio upload HTTP ${upRes.status}`);
+
+      const files = await upRes.json();
+      const filePath = files && files[0];
+      if (!filePath) throw new Error("No file path returned from upload");
+
+      // 1. Try primary endpoint (GPU)
+      try {
+        return await _runSingleGradioCall(endpoint, filePath, question);
+      } catch (gpuErr) {
+        console.warn(`ZeroGPU endpoint '${endpoint}' notice: ${gpuErr.message}. Attempting CPU fallback...`);
+        // 2. Try CPU fallback endpoint (unlimited quota)
+        const cpuEndpoint = `${endpoint}_cpu`;
+        return await _runSingleGradioCall(cpuEndpoint, filePath, question);
+      }
+    }
+
     async function callDetect(file) {
       detProgress.style.display = "block";
       const t0 = performance.now();
       try {
         let data = null;
 
-        // 1. Direct ZeroGPU inference via native Gradio API
+        // 1. Direct ZeroGPU / CPU fallback inference via native Gradio API
         try {
-          console.log("Calling Hugging Face ZeroGPU directly...");
+          console.log("Calling Hugging Face backend directly...");
           data = await callGradioDirect("predict", file);
-          console.log("Direct ZeroGPU detection success:", data);
+          console.log("Direct Hugging Face detection success:", data);
         } catch (directErr) {
-          console.warn("Direct ZeroGPU call notice (falling back to Vercel Serverless):", directErr.message);
+          console.warn("Direct call notice (falling back to Vercel Serverless):", directErr.message);
         }
 
         // 2. Fallback to Vercel Serverless Proxy
-        if (!data) {
+        if (!data || data.error) {
           console.log("Using Vercel Serverless Proxy (/api/detect)...");
           const payload = cachedBase64
             ? JSON.stringify({ image: cachedBase64 })
@@ -1073,6 +1087,10 @@
           data = await res.json();
         }
 
+        if (data && data.error) {
+          throw new Error(data.error);
+        }
+
         const latency = Math.round(performance.now() - t0);
         document.getElementById("latency-chip").innerHTML = `Latency: <strong>${latency} ms</strong>`;
 
@@ -1080,12 +1098,18 @@
         renderBoxes(data);
         renderJson(data);
 
+        const counts = (data && data.counts_by_class) || {};
+        const persons = counts.person || 0;
+        const hats = counts.hat || 0;
+        const vests = counts.vest || 0;
+        const totalDets = (data && typeof data.total_detections === 'number') ? data.total_detections : (persons + hats + vests);
+
         saveActivity({
           type: "detect",
-          title: `Detection Scan (${data.total_detections} object${data.total_detections === 1 ? '' : 's'})`,
-          detail: `Workers: ${data.counts_by_class.person || 0} | Hats: ${data.counts_by_class.hat || 0} | Vests: ${data.counts_by_class.vest || 0}`,
+          title: `Detection Scan (${totalDets} object${totalDets === 1 ? '' : 's'})`,
+          detail: `Workers: ${persons} | Hats: ${hats} | Vests: ${vests}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          tag: data.counts_by_class.hat < (data.counts_by_class.person || 0) ? "Violation" : "Compliant"
+          tag: hats < persons ? "Violation" : "Compliant"
         });
       } catch (err) {
         console.error(err);
@@ -1198,12 +1222,16 @@
           data = await res.json();
         }
 
+        if (data && data.error) {
+          throw new Error(data.error);
+        }
+
         renderAnswer(data);
 
         saveActivity({
           type: "reason",
           title: `Q: "${q}"`,
-          detail: data.answer,
+          detail: data.answer || "Safety reasoning synthesized",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           tag: data.status === "insufficient_information" ? "Guardrail" : (data.intent_routing && !data.intent_routing.needs_detection ? "Bypassed" : "Verified")
         });

@@ -8,6 +8,71 @@ export const config = {
 
 const HF_SPACE_URL = 'https://akashhhhwqx-ppe-safety-backend.hf.space';
 
+async function executeGradioReason(endpoint, filePath, question) {
+  const callHeaders = { 'Content-Type': 'application/json' };
+  if (process.env.HF_TOKEN) {
+    callHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
+  }
+
+  const callRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/${endpoint}`, {
+    method: 'POST',
+    headers: callHeaders,
+    body: JSON.stringify({
+      data: [
+        { path: filePath, meta: { _type: 'gradio.FileData' } },
+        question
+      ]
+    }),
+  });
+
+  if (!callRes.ok) {
+    return { success: false, error: `Queue status ${callRes.status}` };
+  }
+
+  const { event_id } = await callRes.json();
+  if (!event_id) {
+    return { success: false, error: 'No event_id returned' };
+  }
+
+  const streamHeaders = {};
+  if (process.env.HF_TOKEN) {
+    streamHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
+  }
+
+  const streamRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/${endpoint}/${event_id}`, {
+    headers: streamHeaders
+  });
+
+  if (!streamRes.ok) {
+    return { success: false, error: `Stream status ${streamRes.status}` };
+  }
+
+  const sseText = await streamRes.text();
+  const lines = sseText.split('\n');
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      try {
+        const raw = JSON.parse(line.slice(6));
+        if (Array.isArray(raw)) {
+          const resultObj = typeof raw[0] === 'string' ? JSON.parse(raw[0]) : raw[0];
+          if (resultObj && !resultObj.error) {
+            return { success: true, data: resultObj };
+          }
+          if (resultObj && resultObj.error) {
+            return { success: false, error: resultObj.error };
+          }
+        } else if (raw && raw.error) {
+          const isQuota = String(raw.error).toLowerCase().includes('quota') || String(raw.error).toLowerCase().includes('limit');
+          return { success: false, is_quota: isQuota, error: raw.error };
+        }
+      } catch (pe) {}
+    }
+  }
+
+  return { success: false, error: 'Empty result from stream', raw: sseText };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -86,70 +151,22 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Gradio upload returned empty file path' });
     }
 
-    // 2. Call /reason endpoint
-    const callHeaders = { 'Content-Type': 'application/json' };
-    if (process.env.HF_TOKEN) {
-      callHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
+    // 2. Try ZeroGPU reasoning first
+    let result = await executeGradioReason('reason', filePath, question);
+
+    // 3. If ZeroGPU quota is exceeded or GPU fails, fallback to CPU reasoning
+    if (!result.success) {
+      console.warn(`ZeroGPU reason notice: ${result.error}. Attempting CPU fallback...`);
+      result = await executeGradioReason('reason_cpu', filePath, question);
     }
 
-    const callRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/reason`, {
-      method: 'POST',
-      headers: callHeaders,
-      body: JSON.stringify({
-        data: [
-          { path: filePath, meta: { _type: 'gradio.FileData' } },
-          question
-        ]
-      }),
+    if (result.success && result.data) {
+      return res.status(200).json(result.data);
+    }
+
+    return res.status(502).json({
+      error: `Reasoning failed on both GPU and CPU: ${result.error || 'Unknown error'}`
     });
-
-    if (!callRes.ok) {
-      const callErr = await callRes.text().catch(() => '');
-      return res.status(callRes.status).json({
-        error: `Gradio call failed (${callRes.status}): ${callErr.slice(0, 150)}`
-      });
-    }
-
-    const { event_id } = await callRes.json();
-    if (!event_id) {
-      return res.status(502).json({ error: 'Gradio call returned no event_id' });
-    }
-
-    // 3. Read SSE stream
-    const streamHeaders = {};
-    if (process.env.HF_TOKEN) {
-      streamHeaders['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
-    }
-
-    const streamRes = await fetch(`${HF_SPACE_URL}/gradio_api/call/reason/${event_id}`, {
-      headers: streamHeaders
-    });
-
-    if (!streamRes.ok) {
-      const streamErr = await streamRes.text().catch(() => '');
-      return res.status(streamRes.status).json({
-        error: `Gradio stream failed (${streamRes.status}): ${streamErr.slice(0, 150)}`
-      });
-    }
-
-    const sseText = await streamRes.text();
-    const lines = sseText.split('\n');
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const raw = JSON.parse(line.slice(6));
-          const resultObj = typeof raw[0] === 'string' ? JSON.parse(raw[0]) : raw[0];
-          if (resultObj) {
-            return res.status(200).json(resultObj);
-          }
-        } catch (parseErr) {
-          // continue checking
-        }
-      }
-    }
-
-    return res.status(200).json({ raw_sse: sseText });
   } catch (err) {
     return res.status(500).json({
       error: `Reasoning proxy error: ${err.message || 'Internal error'}`
