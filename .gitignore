@@ -1,5 +1,6 @@
 # Python
 powershell.bat
+*.pdf
 __pycache__/
 *.py[cod]
 *$py.class

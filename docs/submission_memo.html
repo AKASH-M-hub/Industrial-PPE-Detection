@@ -468,9 +468,17 @@
        PRINT MEDIA SPECIFICATION: STRICT 2-PAGE A4 OUTPUT
        ============================================================ */
     @media print {
-      body {
+      @page {
+        size: A4 portrait;
+        margin: 8mm 10mm 8mm 10mm;
+      }
+
+      html, body {
         background: #ffffff !important;
         padding: 0 !important;
+        margin: 0 !important;
+        font-size: 8.5pt !important;
+        line-height: 1.35 !important;
       }
 
       .screen-toolbar {
@@ -479,6 +487,7 @@
 
       .document-workspace {
         padding: 0 !important;
+        margin: 0 !important;
         gap: 0 !important;
         display: block !important;
       }
@@ -486,20 +495,107 @@
       .a4-sheet {
         width: 100% !important;
         max-width: 100% !important;
-        min-height: 275mm !important;
+        height: 279mm !important;
+        max-height: 279mm !important;
+        min-height: unset !important;
         margin: 0 !important;
         padding: 0 !important;
         box-shadow: none !important;
         border-radius: 0 !important;
         page-break-after: always !important;
         break-after: page !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+      }
+
+      .sheet-body {
+        gap: 6px !important;
+        flex: 1 !important;
+        justify-content: flex-start !important;
+      }
+
+      h2 {
+        font-size: 10pt !important;
+        margin-top: 6px !important;
+        margin-bottom: 2px !important;
+        padding-bottom: 1px !important;
+      }
+
+      p {
+        font-size: 8.2pt !important;
+        margin-bottom: 3px !important;
+        line-height: 1.35 !important;
+      }
+
+      table {
+        margin: 4px 0 !important;
+        font-size: 7.8pt !important;
+      }
+
+      th, td {
+        padding: 3px 5px !important;
+      }
+
+      .memo-header {
+        padding: 8px 12px !important;
+        margin-bottom: 6px !important;
+      }
+
+      .memo-title {
+        font-size: 13pt !important;
+      }
+
+      .metric-ribbon {
+        margin: 4px 0 !important;
+        gap: 8px !important;
+      }
+
+      .metric-card {
+        padding: 4px 6px !important;
+      }
+
+      .metric-num {
+        font-size: 13pt !important;
+      }
+
+      .compare-grid {
+        margin: 3px 0 !important;
+        gap: 6px !important;
+      }
+
+      .compare-card {
+        padding: 4px 6px !important;
+      }
+
+      .pipeline-box {
+        padding: 6px 10px !important;
+        margin: 4px 0 !important;
+        font-size: 8pt !important;
+      }
+
+      .callout-box {
+        padding: 6px 10px !important;
+        margin: 4px 0 !important;
+        font-size: 8pt !important;
+      }
+
+      .bonus-grid {
+        gap: 8px !important;
+        margin-top: 4px !important;
+      }
+
+      .bonus-card {
+        padding: 4px 6px !important;
       }
 
       .sheet-footer {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
+        padding-top: 4px !important;
+        margin-top: 4px !important;
+        position: relative !important;
       }
     }
   </style>
